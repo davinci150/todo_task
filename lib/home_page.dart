@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -99,9 +98,9 @@ class _MyHomePageState extends State<MyHomePage> {
                       )
                     ],
                   ),
-                  const Divider(
+                  Divider(
                     thickness: 2,
-                    color: Colors.blueGrey,
+                    color: Theme.of(context).primaryColor,
                   ),
                   Column(
                     children: list.map((e) {
@@ -229,24 +228,26 @@ class _MyHomePageState extends State<MyHomePage> {
                   saveTasks();
                 },
               ),
-        floatingActionButton: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            FloatingActionButton(
-              onPressed: () => copyToCliboard(),
-              tooltip: 'Copy to clipboard',
-              child: const Icon(Icons.copy_all_outlined),
-            ),
-            const SizedBox(
-              width: 20,
-            ),
-            FloatingActionButton(
-              onPressed: _addTask,
-              tooltip: 'Add new task',
-              child: const Icon(Icons.add),
-            ),
-          ],
-        ),
+        floatingActionButton: selectedGroup == null
+            ? null
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  FloatingActionButton(
+                    onPressed: () => copyToCliboard(),
+                    tooltip: 'Copy to clipboard',
+                    child: const Icon(Icons.copy_all_outlined),
+                  ),
+                  const SizedBox(
+                    width: 20,
+                  ),
+                  FloatingActionButton(
+                    onPressed: _addTask,
+                    tooltip: 'Add new task',
+                    child: const Icon(Icons.add),
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -335,6 +336,7 @@ class _MyHomePageState extends State<MyHomePage> {
               TextButton(
                   onPressed: () {
                     list.remove(model);
+                    selectedGroup = null;
                     setState(() {});
                     saveTasks();
 
@@ -378,6 +380,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     list.add(groupModel);
                     selectedGroup = groupModel;
                     setState(() {});
+                    Navigator.pop(context);
                     Navigator.pop(context);
                   },
                   child: const Text('OK')),

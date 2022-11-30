@@ -48,7 +48,7 @@ class TextItemWidget extends StatelessWidget {
                 maxLines: null,
                 initialValue: model.text,
                 style: TextStyle(
-                    color: model.isDone != null ? Colors.black : Colors.grey,
+                    color: model.isVisible == true ? Colors.black : Colors.grey,
                     fontSize: 14),
                 decoration: InputDecoration(
                     prefixIcon: Padding(
@@ -121,12 +121,11 @@ class _CheckboxCustomState extends State<CheckboxCustom> {
       icon = Icons.visibility_off;
     } else if (curValue == true) {
       icon = Icons.check_box;
-    } else if (curValue == false) {
+    } else {
       icon = Icons.check_box_outline_blank;
     }
     return InkWell(
       onLongPress: () {
-        //curValue = null;
         widget.onChanged(null);
         setState(() {});
       },
