@@ -102,75 +102,10 @@ class _MyHomePageState extends State<MyHomePage> {
                     thickness: 2,
                     color: Theme.of(context).primaryColor,
                   ),
-                  Column(
-                    children: list.map((e) {
-                          return InkWell(
-                            borderRadius: BorderRadius.circular(8),
-                            onTap: () {
-                              selectedGroup = e;
-                              setState(() {});
-                              Navigator.pop(context);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.only(left: 6),
-                              decoration: selectedGroup != e
-                                  ? null
-                                  : BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8),
-                                      color: Colors.white),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    e.text!,
-                                    style: TextStyle(
-                                        color: selectedGroup == e
-                                            ? Colors.blueGrey
-                                            : Colors.grey),
-                                  ),
-                                  IconButton(
-                                      onPressed: () {
-                                        showDeleteGroupDialog(e);
-                                      },
-                                      icon: Icon(
-                                        Icons.close,
-                                        color: Colors.red.withOpacity(0.6),
-                                      ))
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList() +
-                        [
-                          InkWell(
-                            borderRadius: BorderRadius.circular(8),
-                            onTap: () {
-                              showAddGroupDialog();
-                            },
-                            child: Container(
-                              margin: const EdgeInsets.only(top: 6, bottom: 6),
-                              padding: const EdgeInsets.fromLTRB(6, 0, 8, 0),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Add new group'),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                        color: Colors.green,
-                                        borderRadius: BorderRadius.circular(6)),
-                                    child: const Icon(
-                                      Icons.add,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        ],
-                  ),
+                  Column(children: <Widget>[
+                    ...list.map(groupItemWidget).toList(),
+                    ...[addNewGroupDrawerButton()]
+                  ]),
                 ],
               ),
             )),
@@ -248,6 +183,71 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ],
               ),
+      ),
+    );
+  }
+
+  Widget groupItemWidget(GroupModel groupModel) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () {
+        selectedGroup = groupModel;
+        setState(() {});
+        Navigator.pop(context);
+      },
+      child: Container(
+        padding: const EdgeInsets.only(left: 6),
+        decoration: selectedGroup != groupModel
+            ? null
+            : BoxDecoration(
+                borderRadius: BorderRadius.circular(8), color: Colors.white),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              groupModel.text!,
+              style: TextStyle(
+                  color: selectedGroup == groupModel
+                      ? Colors.blueGrey
+                      : Colors.grey),
+            ),
+            IconButton(
+                onPressed: () {
+                  showDeleteGroupDialog(groupModel);
+                },
+                icon: Icon(
+                  Icons.close,
+                  color: Colors.red.withOpacity(0.6),
+                ))
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget addNewGroupDrawerButton() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () {
+        showAddGroupDialog();
+      },
+      child: Container(
+        margin: const EdgeInsets.only(top: 6, bottom: 6),
+        padding: const EdgeInsets.fromLTRB(6, 0, 8, 0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Add new group'),
+            Container(
+              decoration: BoxDecoration(
+                  color: Colors.green, borderRadius: BorderRadius.circular(6)),
+              child: const Icon(
+                Icons.add,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
