@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'main.dart';
 import 'model/group_model.dart';
 import 'model/task_model.dart';
 import 'widget/task_item_widget.dart';
@@ -57,134 +59,152 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        backgroundColor: const Color(0xFFEFEFEF),
-        drawer: Drawer(
-            backgroundColor: const Color(0xFFEFEFEF),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.account_circle_outlined,
-                        size: 50,
+    return Consumer<ModelTheme>(
+        builder: (context, ModelTheme themeNotifier, child) {
+      return GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Scaffold(
+          drawer: Drawer(
+              //backgroundColor: const Color(0xFFEFEFEF),
+              child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(
+                  height: 20,
+                ),
+                Row(
+                  children: [
+                    Container(
+                      height: 40,
+                      width: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.grey,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      const SizedBox(
-                        width: 12,
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'name',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                          SizedBox(
-                            height: 8,
-                          ),
-                          Text(
-                            'email@test.com',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        ],
-                      )
-                    ],
-                  ),
-                  Divider(
-                    thickness: 2,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                  Column(children: <Widget>[
-                    ...list.map(groupItemWidget).toList(),
-                    ...[addNewGroupDrawerButton()]
-                  ]),
-                ],
-              ),
-            )),
-        appBar: AppBar(
-          title: Text(selectedGroup?.text ?? 'TODO TASK'),
-        ),
-        body: selectedGroup == null
-            ? const SizedBox()
-            : ReorderableListView.builder(
-                scrollController: scrollController,
-                buildDefaultDragHandles: false,
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 80),
-                itemCount: selectedGroup!.tasks!.length,
-                itemBuilder: (ctx, index) {
-                  return TextItemWidget(
-                      index: index,
-                      key: ValueKey(selectedGroup!.tasks![index]),
-                      model: selectedGroup!.tasks![index],
-                      onTapEnter: _addTask,
-                      onChanged: (value) {
-                        final model = selectedGroup!.tasks![index];
-                        selectedGroup!.tasks![index] = model.copyWith(
-                            isDone: value, isVisible: value != null);
-                        setState(() {});
-                        saveTasks();
-                      },
-                      onTextChange: (text) {
-                        final model = selectedGroup!.tasks![index];
-                        selectedGroup!.tasks![index] =
-                            model.copyWith(text: text);
-                        saveTasks();
-                      },
-                      onTapDelete: () {
-                        if ((selectedGroup!.tasks![index].text ?? '')
-                            .trim()
-                            .isEmpty) {
-                          selectedGroup!.tasks!.removeAt(index);
+                      child: FlutterLogo(),
+                    ),
+                    const SizedBox(
+                      width: 12,
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'name',
+                          //style: TextStyle(color: Colors.grey),
+                        ),
+                        SizedBox(
+                          height: 8,
+                        ),
+                        Text(
+                          'email@test.com',
+                          // style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+                Divider(
+                  thickness: 2,
+                  color: Theme.of(context).primaryColor,
+                ),
+                Column(children: <Widget>[
+                  ...list.map(groupItemWidget).toList(),
+                  ...[addNewGroupDrawerButton()]
+                ]),
+              ],
+            ),
+          )),
+          appBar: AppBar(
+            actions: [
+              IconButton(
+                  onPressed: () {
+                    themeNotifier.isDark
+                        ? themeNotifier.isDark = false
+                        : themeNotifier.isDark = true;
+                  },
+                  icon: Icon(themeNotifier.isDark
+                      ? Icons.nightlight_round
+                      : Icons.wb_sunny))
+            ],
+            title: Text(selectedGroup?.text ?? 'TODO TASK'),
+          ),
+          body: selectedGroup == null
+              ? const SizedBox()
+              : ReorderableListView.builder(
+                  scrollController: scrollController,
+                  buildDefaultDragHandles: false,
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 80),
+                  itemCount: selectedGroup!.tasks!.length,
+                  itemBuilder: (ctx, index) {
+                    return TextItemWidget(
+                        index: index,
+                        key: ValueKey(selectedGroup!.tasks![index]),
+                        model: selectedGroup!.tasks![index],
+                        onTapEnter: _addTask,
+                        onChanged: (value) {
+                          final model = selectedGroup!.tasks![index];
+                          selectedGroup!.tasks![index] = model.copyWith(
+                              isDone: value, isVisible: value != null);
                           setState(() {});
                           saveTasks();
-                        } else {
-                          showDeleteMsgDialog(index);
+                        },
+                        onTextChange: (text) {
+                          final model = selectedGroup!.tasks![index];
+                          selectedGroup!.tasks![index] =
+                              model.copyWith(text: text);
+                          saveTasks();
+                        },
+                        onTapDelete: () {
+                          if ((selectedGroup!.tasks![index].text ?? '')
+                              .trim()
+                              .isEmpty) {
+                            selectedGroup!.tasks!.removeAt(index);
+                            setState(() {});
+                            saveTasks();
+                          } else {
+                            showDeleteMsgDialog(index);
+                          }
                         }
+                        //),
+                        );
+                  },
+                  onReorder: (int oldIndex, int newIndex) {
+                    setState(() {
+                      if (newIndex > oldIndex) {
+                        newIndex -= 1;
                       }
-                      //),
-                      );
-                },
-                onReorder: (int oldIndex, int newIndex) {
-                  setState(() {
-                    if (newIndex > oldIndex) {
-                      newIndex -= 1;
-                    }
-                    final item = selectedGroup!.tasks!.removeAt(oldIndex);
-                    selectedGroup!.tasks!.insert(newIndex, item);
-                  });
-                  saveTasks();
-                },
-              ),
-        floatingActionButton: selectedGroup == null
-            ? null
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  FloatingActionButton(
-                    onPressed: () => copyToCliboard(),
-                    tooltip: 'Copy to clipboard',
-                    child: const Icon(Icons.copy_all_outlined),
-                  ),
-                  const SizedBox(
-                    width: 20,
-                  ),
-                  FloatingActionButton(
-                    onPressed: _addTask,
-                    tooltip: 'Add new task',
-                    child: const Icon(Icons.add),
-                  ),
-                ],
-              ),
-      ),
-    );
+                      final item = selectedGroup!.tasks!.removeAt(oldIndex);
+                      selectedGroup!.tasks!.insert(newIndex, item);
+                    });
+                    saveTasks();
+                  },
+                ),
+          floatingActionButton: selectedGroup == null
+              ? null
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    FloatingActionButton(
+                      onPressed: () => copyToCliboard(),
+                      tooltip: 'Copy to clipboard',
+                      child: const Icon(Icons.copy_all_outlined),
+                    ),
+                    const SizedBox(
+                      width: 20,
+                    ),
+                    FloatingActionButton(
+                      onPressed: _addTask,
+                      tooltip: 'Add new task',
+                      child: const Icon(Icons.add),
+                    ),
+                  ],
+                ),
+        ),
+      );
+    });
   }
 
   Widget groupItemWidget(GroupModel groupModel) {
@@ -200,17 +220,12 @@ class _MyHomePageState extends State<MyHomePage> {
         decoration: selectedGroup != groupModel
             ? null
             : BoxDecoration(
-                borderRadius: BorderRadius.circular(8), color: Colors.white),
+                borderRadius: BorderRadius.circular(8),
+                color: Theme.of(context).primaryColor),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              groupModel.text!,
-              style: TextStyle(
-                  color: selectedGroup == groupModel
-                      ? Colors.blueGrey
-                      : Colors.grey),
-            ),
+            Text(groupModel.text!),
             IconButton(
                 onPressed: () {
                   showDeleteGroupDialog(groupModel);
@@ -232,7 +247,7 @@ class _MyHomePageState extends State<MyHomePage> {
         showAddGroupDialog();
       },
       child: Container(
-        margin: const EdgeInsets.only(top: 6, bottom: 6),
+        margin: const EdgeInsets.only(top: 8, bottom: 8),
         padding: const EdgeInsets.fromLTRB(6, 0, 8, 0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

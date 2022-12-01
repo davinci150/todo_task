@@ -25,55 +25,58 @@ class TextItemWidget extends StatelessWidget {
     return Stack(
       alignment: Alignment.bottomRight,
       children: [
-        Container(
+        Card(
           margin: const EdgeInsets.only(bottom: 6),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-              color: Colors.white, borderRadius: BorderRadius.circular(10)),
-          child: Row(
-            children: [
-              ReorderableDragStartListener(
-                index: index,
-                child: const Icon(
-                  Icons.drag_handle,
-                  color: Colors.black38,
+          // padding: const EdgeInsets.symmetric(horizontal: 8),
+          // decoration: BoxDecoration(
+          //     color: Color(0xFF282b38), borderRadius: BorderRadius.circular(10)),
+          child: Padding(
+            padding: const EdgeInsets.only(left: 8.0),
+            child: Row(
+              children: [
+                ReorderableDragStartListener(
+                  index: index,
+                  child: const Icon(
+                    Icons.drag_handle,
+                    color: Colors.black38,
+                  ),
                 ),
-              ),
-              Expanded(
-                  child: TextFormField(
-                keyboardType: TextInputType.text,
-                //autofocus: true,
-                onEditingComplete: onTapEnter,
-                onChanged: onTextChange,
-                maxLines: null,
-                initialValue: model.text,
-                style: TextStyle(
-                    color: model.isVisible == true ? Colors.black : Colors.grey,
-                    fontSize: 14),
-                decoration: InputDecoration(
-                    prefixIcon: Padding(
-                      padding: const EdgeInsets.only(bottom: 2.0),
-                      child: CheckboxCustom(
-                        onChanged: onChanged,
-                        disabled: model.isVisible == false,
-                        value: model.isDone,
+                Expanded(
+                    child: TextFormField(
+                  keyboardType: TextInputType.text,
+                  //autofocus: true,
+                  onEditingComplete: onTapEnter,
+                  onChanged: onTextChange,
+                  maxLines: null,
+                  initialValue: model.text,
+                  style: TextStyle(
+                      color: model.isVisible == true ? null : Colors.grey,
+                      fontSize: 14),
+                  decoration: InputDecoration(
+                      prefixIcon: Padding(
+                        padding: const EdgeInsets.only(bottom: 2.0),
+                        child: CheckboxCustom(
+                          onChanged: onChanged,
+                          disabled: model.isVisible == false,
+                          value: model.isDone,
+                        ),
                       ),
-                    ),
-                    //isDense: false,
-                    //contentPadding: EdgeInsets.zero,
-                    suffixIcon: InkWell(
-                      onTap: onTapDelete,
-                      child: Icon(
-                        Icons.close,
-                        color: Colors.red[300],
+                      //isDense: false,
+                      //contentPadding: EdgeInsets.zero,
+                      suffixIcon: InkWell(
+                        onTap: onTapDelete,
+                        child: Icon(
+                          Icons.close,
+                          color: Colors.red[300],
+                        ),
                       ),
-                    ),
-                    hintStyle: TextStyle(color: Colors.grey[500]),
-                    hintText: 'Enter text',
-                    border: InputBorder.none),
-              )),
-              //Text(model.text),
-            ],
+                      hintStyle: TextStyle(color: Colors.grey[500]),
+                      hintText: 'Enter text',
+                      border: InputBorder.none),
+                )),
+                //Text(model.text),
+              ],
+            ),
           ),
         ),
         if (model.createdOn != null)
