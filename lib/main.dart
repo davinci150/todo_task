@@ -43,11 +43,15 @@ ThemeData darkTheme() {
 
 ThemeData lightTheme() {
   return ThemeData(
+      textTheme: const TextTheme(),
       fontFamily: 'Rubik-Regular',
       brightness: Brightness.light,
       appBarTheme: const AppBarTheme(backgroundColor: Colors.blueGrey),
       primaryColor: Colors.blueGrey,
-      scaffoldBackgroundColor: const Color(0xFFEFEFEF));
+      iconTheme: const IconThemeData(color: Colors.black),
+      scaffoldBackgroundColor: const Color(0xFFEFEFEF),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Colors.blueGrey));
 }
 
 class MyThemePreferences {

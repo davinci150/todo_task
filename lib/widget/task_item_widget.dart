@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../model/task_model.dart';
@@ -22,6 +24,59 @@ class TextItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Container(
+      // decoration: BoxDecoration(
+      //     border:
+      //         Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.5)))),
+      margin: EdgeInsets.only(bottom: 10),
+      //padding: EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ReorderableDragStartListener(
+                index: index,
+                child: Icon(
+                  Icons.drag_handle,
+                  color: Theme.of(context).iconTheme.color?.withOpacity(0.3),
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 6),
+              CheckboxCustom(
+                onChanged: onChanged,
+                disabled: model.isVisible == false,
+                value: model.isDone,
+              ),
+              const SizedBox(width: 6),
+            ],
+          ),
+          Expanded(
+            child: TextFormField(
+              maxLines: null,
+              initialValue: model.text,
+              onChanged: onTextChange,
+              decoration: InputDecoration(
+                hintText: 'Enter the text',
+                hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5)),
+                contentPadding: const EdgeInsets.fromLTRB(0, 2, 0, 0),
+                isDense: true,
+                border: InputBorder.none,
+              ),
+            ),
+          ),
+          InkWell(
+            onTap: onTapDelete,
+            child: Icon(
+              Icons.close,
+              color: Colors.red.withOpacity(0.4),
+              size: 12,
+            ),
+          ),
+        ],
+      ),
+    );
     return Stack(
       alignment: Alignment.bottomRight,
       children: [
@@ -49,6 +104,7 @@ class TextItemWidget extends StatelessWidget {
                   onChanged: onTextChange,
                   maxLines: null,
                   initialValue: model.text,
+
                   style: TextStyle(
                       color: model.isVisible == true ? null : Colors.grey,
                       fontSize: 14),
@@ -122,12 +178,14 @@ class _CheckboxCustomState extends State<CheckboxCustom> {
   Widget build(BuildContext context) {
     if (widget.disabled == true) {
       icon = Icons.visibility_off;
-    } else if (curValue == true) {
-      icon = Icons.check_box;
     } else {
-      icon = Icons.check_box_outline_blank;
+      if (curValue == true) {
+        icon = Icons.check_circle;
+      } else {
+        icon = Icons.radio_button_unchecked_outlined;
+      }
     }
-    return InkWell(
+    return GestureDetector(
       onLongPress: () {
         widget.onChanged(null);
         setState(() {});
@@ -141,10 +199,7 @@ class _CheckboxCustomState extends State<CheckboxCustom> {
         setState(() {});
       },
       child: Icon(icon,
-          size: 18,
-          color: widget.disabled == false
-              ? Theme.of(context).primaryColor
-              : Colors.grey),
+          size: 16, color: widget.disabled == false ? null : Colors.grey),
     );
   }
 }

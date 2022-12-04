@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -18,7 +19,7 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-const taskKey = 'taskKeyV1';
+const taskKey = kDebugMode ? 'testKey' : 'taskKeyV1';
 
 class _MyHomePageState extends State<MyHomePage> {
   List<GroupModel> list = [];
