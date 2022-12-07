@@ -21,7 +21,8 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-const taskKey = kDebugMode ? 'testKeyV1' : 'taskKeyV1';
+const taskKey = kDebugMode ? 'testKeyV1' : 'taskKeyV2';
+const selectedGroupKey = kDebugMode ? 'selectedGroupV1' : 'selectedGroupV1';
 
 class _MyHomePageState extends State<MyHomePage> {
   List<FolderModel> list = [];
@@ -185,9 +186,14 @@ class _MyHomePageState extends State<MyHomePage> {
                         //    saveTasks();
                         //  },
                         onTapDelete: () {
-                          selectedFolder!.tasks!.remove(item);
-                          setState(() {});
-                          saveTasks();
+                          if ((item.text ?? '').isEmpty &&
+                              item.tasks!.isEmpty) {
+                            selectedFolder!.tasks!.remove(item);
+                            setState(() {});
+                            saveTasks();
+                          } else {
+                            showDeleteMsgDialog(item);
+                          }
 
                           // if ((item.tasks![i].title ?? '')
                           //     .trim()
@@ -244,6 +250,8 @@ class _MyHomePageState extends State<MyHomePage> {
       borderRadius: BorderRadius.circular(8),
       onTap: () {
         selectedFolder = folderModel;
+        final i = list.indexOf(selectedFolder!);
+        prefs?.setInt(selectedGroupKey, i);
         setState(() {});
         Navigator.pop(context);
       },
@@ -300,6 +308,8 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void initTask() {
+    final selectedGroupIndex = prefs?.getInt(selectedGroupKey) ?? -1;
+
     List<FolderModel> result = [];
     final jsonStr = prefs?.getString(taskKey);
     if ((jsonStr ?? '').isNotEmpty) {
@@ -308,8 +318,8 @@ class _MyHomePageState extends State<MyHomePage> {
         result.add(FolderModel.fromJson(value as Map<String, dynamic>));
       }
     }
-    if ((result).isNotEmpty) {
-      selectedFolder = result.first;
+    if ((result).isNotEmpty && selectedGroupIndex != -1) {
+      selectedFolder = result[selectedGroupIndex];
     }
     list = result;
     setState(() {});
@@ -340,7 +350,7 @@ class _MyHomePageState extends State<MyHomePage> {
         if (listTasks.isNotEmpty) {
           for (var task in listTasks) {
             res = res +
-                (task.isDone! ? '     ✓ ' : '     ☐ ') +
+                (task.isDone! ? '       ✓ ' : '       ☐ ') +
                 task.text! +
                 '\n';
           }
@@ -357,7 +367,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void showDeleteMsgDialog(int index) {
+  void showDeleteMsgDialog(GroupModel model) {
     showDialog(
         context: context,
         builder: (ctx) {
@@ -371,7 +381,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   child: const Text('Cancel')),
               TextButton(
                   onPressed: () {
-                    selectedFolder!.tasks!.removeAt(index);
+                    selectedFolder!.tasks!.remove(model);
                     setState(() {});
                     saveTasks();
 
@@ -399,6 +409,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   onPressed: () {
                     list.remove(model);
                     selectedFolder = null;
+                    prefs?.setInt(selectedGroupKey, -1);
                     setState(() {});
                     saveTasks();
 
@@ -449,6 +460,8 @@ class _MyHomePageState extends State<MyHomePage> {
     final folderModel = FolderModel(title: title, tasks: []);
     list.add(folderModel);
     selectedFolder = folderModel;
+    final i = list.indexOf(selectedFolder!);
+    prefs?.setInt(selectedGroupKey, i);
     saveTasks();
     setState(() {});
     Navigator.pop(context);
