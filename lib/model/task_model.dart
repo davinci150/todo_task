@@ -4,8 +4,10 @@ class TaskModel {
     required this.isDone,
     required this.createdOn,
     required this.isVisible,
+    required this.id,
   });
 
+  int? id;
   String? text;
   bool? isDone;
   bool? isVisible;
@@ -15,6 +17,7 @@ class TaskModel {
     createdOn = json['CreatedOn'] is int
         ? DateTime.fromMillisecondsSinceEpoch(json['CreatedOn'] as int)
         : null;
+    id = json['Id'] as int;
     text = json['Text'] as String;
     isDone = json['IsDone'] != null ? json['IsDone'] as bool : null;
     isVisible = json['IsVisible'] != null ? json['IsVisible'] as bool : null;
@@ -23,6 +26,7 @@ class TaskModel {
   TaskModel copyWith(
       {String? text, bool? isDone, bool? isVisible, DateTime? createdOn}) {
     return TaskModel(
+      id: id,
       createdOn: createdOn ?? this.createdOn,
       isVisible: isVisible ?? this.isVisible,
       text: text ?? this.text,
@@ -32,6 +36,7 @@ class TaskModel {
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
+    data['Id'] = id;
     data['Text'] = text;
     data['CreatedOn'] = createdOn?.millisecondsSinceEpoch;
     data['IsDone'] = isDone;
@@ -41,5 +46,5 @@ class TaskModel {
   }
 
   @override
-  String toString() => '{text: $text, isDone: $isDone}';
+  String toString() => 'TaskModel{text: $text, isDone: $isDone}';
 }

@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:todo_task/model/group_model.dart';
 import '../model/task_model.dart';
 
 class TextItemWidget extends StatelessWidget {
@@ -10,144 +12,187 @@ class TextItemWidget extends StatelessWidget {
       required this.model,
       required this.index,
       required this.onChanged,
-      required this.onTapEnter,
-      required this.onTextChange,
       required this.onTapDelete})
       : super(key: key);
 
   final int index;
-  final TaskModel model;
-  final void Function(bool?) onChanged;
-  final void Function(String)? onTextChange;
+  final GroupModel model;
+  final void Function(GroupModel) onChanged;
   final VoidCallback onTapDelete;
-  final VoidCallback onTapEnter;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      // decoration: BoxDecoration(
-      //     border:
-      //         Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.5)))),
-      margin: EdgeInsets.only(bottom: 10),
-      //padding: EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: model.tasks!.isEmpty ? null : const EdgeInsets.all(8),
+      margin: model.tasks!.isEmpty
+          ? const EdgeInsets.fromLTRB(20, 4, 20, 4)
+          : const EdgeInsets.fromLTRB(12, 4, 12, 4),
+      decoration: model.tasks!.isNotEmpty
+          ? BoxDecoration(
+              color: Colors.grey.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10))
+          : null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              ReorderableDragStartListener(
-                index: index,
-                child: Icon(
-                  Icons.drag_handle,
-                  color: Theme.of(context).iconTheme.color?.withOpacity(0.3),
-                  size: 16,
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: ReorderableDragStartListener(
+                  index: index,
+                  child: Icon(
+                    Icons.drag_handle,
+                    color: Theme.of(context).iconTheme.color?.withOpacity(0.3),
+                    size: 16,
+                  ),
                 ),
               ),
-              const SizedBox(width: 6),
               CheckboxCustom(
-                onChanged: onChanged,
+                onChanged: (value) {
+                  final newModel =
+                      model.copyWith(isDone: value, isVisible: value != null);
+
+                  onChanged(newModel);
+                },
                 disabled: model.isVisible == false,
                 value: model.isDone,
               ),
               const SizedBox(width: 6),
-            ],
-          ),
-          Expanded(
-            child: TextFormField(
-              maxLines: null,
-              initialValue: model.text,
-              onChanged: onTextChange,
-              decoration: InputDecoration(
-                hintText: 'Enter the text',
-                hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5)),
-                contentPadding: const EdgeInsets.fromLTRB(0, 2, 0, 0),
-                isDense: true,
-                border: InputBorder.none,
-              ),
-            ),
-          ),
-          InkWell(
-            onTap: onTapDelete,
-            child: Icon(
-              Icons.close,
-              color: Colors.red.withOpacity(0.4),
-              size: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-    return Stack(
-      alignment: Alignment.bottomRight,
-      children: [
-        Card(
-          margin: const EdgeInsets.only(bottom: 6),
-          // padding: const EdgeInsets.symmetric(horizontal: 8),
-          // decoration: BoxDecoration(
-          //     color: Color(0xFF282b38), borderRadius: BorderRadius.circular(10)),
-          child: Padding(
-            padding: const EdgeInsets.only(left: 8.0),
-            child: Row(
-              children: [
-                ReorderableDragStartListener(
-                  index: index,
-                  child: const Icon(
-                    Icons.drag_handle,
-                    color: Colors.black38,
-                  ),
-                ),
-                Expanded(
-                    child: TextFormField(
-                  keyboardType: TextInputType.text,
-                  //autofocus: true,
-                  onEditingComplete: onTapEnter,
-                  onChanged: onTextChange,
+              Expanded(
+                child: TextFormField(
                   maxLines: null,
                   initialValue: model.text,
-
-                  style: TextStyle(
-                      color: model.isVisible == true ? null : Colors.grey,
-                      fontSize: 14),
+                  onChanged: (text) {
+                    final newModel = model.copyWith(text: text);
+                    onChanged(newModel);
+                  },
                   decoration: InputDecoration(
-                      prefixIcon: Padding(
-                        padding: const EdgeInsets.only(bottom: 2.0),
-                        child: CheckboxCustom(
-                          onChanged: onChanged,
-                          disabled: model.isVisible == false,
-                          value: model.isDone,
+                    hintText: 'Enter the text',
+                    hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5)),
+                    contentPadding: const EdgeInsets.fromLTRB(0, 2, 0, 0),
+                    isDense: true,
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+              InkWell(
+                  onTap: () {
+                    if (model.tasks!.isEmpty) {
+                      final tasks = List.of(model.tasks!)
+                        ..add(TaskModel(
+                            id: 0,
+                            text: model.text,
+                            isDone: model.isDone,
+                            createdOn: model.createdOn,
+                            isVisible: model.isVisible));
+
+                      final newModel =
+                          model.copyWith(tasks: tasks, text: '', isDone: false);
+                      onChanged(newModel);
+                    }
+                    //
+                    else {
+                      final tasks = List.of(model.tasks!)
+                        ..add(TaskModel(
+                            id: model.tasks!.length,
+                            text: '',
+                            isDone: false,
+                            createdOn: DateTime.now(),
+                            isVisible: true));
+                      final newModel = model.copyWith(tasks: tasks);
+                      onChanged(newModel);
+                    }
+                  },
+                  child: Icon(
+                    model.tasks!.isEmpty ? Icons.copy_all : Icons.add,
+                    size: 16,
+                  )),
+              InkWell(
+                onTap: onTapDelete,
+                child: Icon(
+                  Icons.close,
+                  color: Colors.red.withOpacity(0.4),
+                  size: 12,
+                ),
+              ),
+            ],
+          ),
+          Column(
+            children: model.tasks!.map((item) {
+              final i = model.tasks!.indexOf(item);
+              return Container(
+                padding: const EdgeInsets.only(left: 42, top: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CheckboxCustom(
+                          onChanged: (value) {
+                            final newTask = item.copyWith(
+                                isDone: value, isVisible: value != null);
+                            final tasks = List.of(model.tasks!)..[i] = newTask;
+                            final newModel = model.copyWith(tasks: tasks);
+                            onChanged(newModel);
+                          },
+                          disabled: item.isVisible == false,
+                          value: item.isDone,
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                    ),
+                    Expanded(
+                      child: TextFormField(
+                        key: ValueKey(item.id),
+                        maxLines: null,
+                        initialValue: item.text,
+                        onChanged: (text) {
+                          final newTask = item.copyWith(text: text);
+                          final tasks = List.of(model.tasks!)..[i] = newTask;
+                          final newModel = model.copyWith(tasks: tasks);
+                          onChanged(newModel);
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Enter the text',
+                          hintStyle:
+                              TextStyle(color: Colors.grey.withOpacity(0.5)),
+                          contentPadding: const EdgeInsets.fromLTRB(0, 2, 0, 0),
+                          isDense: true,
+                          border: InputBorder.none,
                         ),
                       ),
-                      //isDense: false,
-                      //contentPadding: EdgeInsets.zero,
-                      suffixIcon: InkWell(
-                        onTap: onTapDelete,
-                        child: Icon(
-                          Icons.close,
-                          color: Colors.red[300],
-                        ),
+                    ),
+                    InkWell(
+                      onTap: () {
+                        final tasks = List.of(model.tasks!)..removeAt(i);
+                        final newGroup = model.copyWith(tasks: tasks);
+
+                        onChanged(newGroup);
+                      },
+                      child: Icon(
+                        Icons.close,
+                        color: Colors.red.withOpacity(0.4),
+                        size: 12,
                       ),
-                      hintStyle: TextStyle(color: Colors.grey[500]),
-                      hintText: 'Enter text',
-                      border: InputBorder.none),
-                )),
-                //Text(model.text),
-              ],
-            ),
-          ),
-        ),
-        if (model.createdOn != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0, right: 20),
-            child: Text(
-              DateFormat('dd MMM, hh:mm').format(model.createdOn!),
-              style: const TextStyle(fontSize: 10, color: Colors.grey),
-            ),
-          ),
-      ],
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          )
+        ],
+      ),
     );
   }
 }
 
+//  void onTextChange(VoidCallback function) {
+//    _debounce?.cancel();
+//    _debounce = Timer(const Duration(milliseconds: 400), () {
+//      _bloc.add(AttachmentDialogSearchEvent(text));
+//    });
+//  }
 class CheckboxCustom extends StatefulWidget {
   const CheckboxCustom({
     Key? key,

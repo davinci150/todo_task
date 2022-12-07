@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'main.dart';
+import 'model/folder_model.dart';
 import 'model/group_model.dart';
 import 'model/task_model.dart';
 import 'widget/task_item_widget.dart';
@@ -19,19 +21,32 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-const taskKey = kDebugMode ? 'testKey' : 'taskKeyV1';
+const taskKey = kDebugMode ? 'testKeyV1' : 'taskKeyV1';
 
 class _MyHomePageState extends State<MyHomePage> {
-  List<GroupModel> list = [];
-  GroupModel? selectedGroup;
+  List<FolderModel> list = [];
+  FolderModel? selectedFolder;
   SharedPreferences? prefs;
 
   late ScrollController scrollController;
+  void deleteAll() {
+    prefs!.remove(taskKey);
+    list.clear();
+    selectedFolder = null;
+    setState(() {});
+  }
 
   void _addTask() {
-    final model = TaskModel(
-        text: '', isDone: false, createdOn: DateTime.now(), isVisible: true);
-    selectedGroup!.tasks!.add(model);
+    //final taskModel = TaskModel(
+    //    text: '', isDone: false, createdOn: DateTime.now(), isVisible: true);
+    final group = GroupModel(
+        text: '',
+        tasks: [],
+        createdOn: DateTime.now(),
+        isDone: false,
+        isVisible: true);
+    selectedFolder!.tasks!.add(group);
+    saveTasks();
     setState(() {});
     scrollToBottom(scrollController);
   }
@@ -128,46 +143,61 @@ class _MyHomePageState extends State<MyHomePage> {
                   },
                   icon: Icon(themeNotifier.isDark
                       ? Icons.nightlight_round
-                      : Icons.wb_sunny))
+                      : Icons.wb_sunny)),
+              if (kDebugMode)
+                IconButton(onPressed: deleteAll, icon: Icon(Icons.remove))
             ],
-            title: Text(selectedGroup?.text ?? 'TODO TASK'),
+            title: Text(selectedFolder?.title ?? 'TODO TASK'),
           ),
-          body: selectedGroup == null
+          body: selectedFolder == null
               ? const SizedBox()
               : ReorderableListView.builder(
                   scrollController: scrollController,
                   buildDefaultDragHandles: false,
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 80),
-                  itemCount: selectedGroup!.tasks!.length,
+                  padding: const EdgeInsets.fromLTRB(0, 10, 0, 80),
+                  itemCount: selectedFolder!
+                      .tasks!.length, // selectedGroup!.tasks!.length,
                   itemBuilder: (ctx, index) {
+                    final item = selectedFolder!.tasks![index];
                     return TextItemWidget(
                         index: index,
-                        key: ValueKey(selectedGroup!.tasks![index]),
-                        model: selectedGroup!.tasks![index],
-                        onTapEnter: _addTask,
-                        onChanged: (value) {
-                          final model = selectedGroup!.tasks![index];
-                          selectedGroup!.tasks![index] = model.copyWith(
-                              isDone: value, isVisible: value != null);
+                        key: ValueKey(item),
+                        model: item,
+                        //onTapEnter: _addTask,
+                        onChanged: (newModel) {
+                          selectedFolder!.tasks![index].text = newModel.text;
+                          selectedFolder!.tasks![index].tasks = newModel.tasks;
+                          selectedFolder!.tasks![index].isDone =
+                              newModel.isDone;
+                          selectedFolder!.tasks![index].isVisible =
+                              newModel.isVisible;
+
+                          // item.tasks![i] =
+                          //     model.copyWith(
+                          //         isDone: value, isVisible: value != null);
                           setState(() {});
                           saveTasks();
                         },
-                        onTextChange: (text) {
-                          final model = selectedGroup!.tasks![index];
-                          selectedGroup!.tasks![index] =
-                              model.copyWith(text: text);
-                          saveTasks();
-                        },
+                        //  onTextChange: (text, i) {
+                        //    final model = item.tasks![i];
+                        //    item.tasks![i] =
+                        //        model.copyWith(text: text);
+                        //    saveTasks();
+                        //  },
                         onTapDelete: () {
-                          if ((selectedGroup!.tasks![index].text ?? '')
-                              .trim()
-                              .isEmpty) {
-                            selectedGroup!.tasks!.removeAt(index);
-                            setState(() {});
-                            saveTasks();
-                          } else {
-                            showDeleteMsgDialog(index);
-                          }
+                          selectedFolder!.tasks!.remove(item);
+                          setState(() {});
+                          saveTasks();
+
+                          // if ((item.tasks![i].title ?? '')
+                          //     .trim()
+                          //     .isEmpty) {
+                          //   list.removeAt(index);
+                          //   setState(() {});
+                          //   saveTasks();
+                          // } else {
+                          //   showDeleteMsgDialog(index);
+                          // }
                         }
                         //),
                         );
@@ -177,13 +207,14 @@ class _MyHomePageState extends State<MyHomePage> {
                       if (newIndex > oldIndex) {
                         newIndex -= 1;
                       }
-                      final item = selectedGroup!.tasks!.removeAt(oldIndex);
-                      selectedGroup!.tasks!.insert(newIndex, item);
+                      final item = selectedFolder!.tasks![oldIndex];
+                      selectedFolder!.tasks!.removeAt(oldIndex);
+                      selectedFolder!.tasks!.insert(newIndex, item);
                     });
                     saveTasks();
                   },
                 ),
-          floatingActionButton: selectedGroup == null
+          floatingActionButton: selectedFolder == null
               ? null
               : Row(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -208,17 +239,17 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  Widget groupItemWidget(GroupModel groupModel) {
+  Widget groupItemWidget(FolderModel folderModel) {
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: () {
-        selectedGroup = groupModel;
+        selectedFolder = folderModel;
         setState(() {});
         Navigator.pop(context);
       },
       child: Container(
         padding: const EdgeInsets.only(left: 6),
-        decoration: selectedGroup != groupModel
+        decoration: selectedFolder != folderModel
             ? null
             : BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
@@ -226,10 +257,10 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(groupModel.text!),
+            Text(folderModel.title!),
             IconButton(
                 onPressed: () {
-                  showDeleteGroupDialog(groupModel);
+                  showDeleteGroupDialog(folderModel);
                 },
                 icon: Icon(
                   Icons.close,
@@ -269,16 +300,16 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void initTask() {
-    List<GroupModel> result = [];
+    List<FolderModel> result = [];
     final jsonStr = prefs?.getString(taskKey);
     if ((jsonStr ?? '').isNotEmpty) {
       final map = jsonDecode(jsonStr!) as List<dynamic>;
       for (var value in map) {
-        result.add(GroupModel.fromJson(value as Map<String, dynamic>));
+        result.add(FolderModel.fromJson(value as Map<String, dynamic>));
       }
     }
     if ((result).isNotEmpty) {
-      selectedGroup = result.first;
+      selectedFolder = result.first;
     }
     list = result;
     setState(() {});
@@ -287,12 +318,13 @@ class _MyHomePageState extends State<MyHomePage> {
   void saveTasks() {
     final saveJson = list.map((e) => e.toJson()).toList();
     final result = jsonEncode(saveJson);
+    log(list.toString());
     prefs?.setString(taskKey, result);
   }
 
   void copyToCliboard() {
     String res = '';
-    selectedGroup!.tasks!
+    selectedFolder!.tasks!
         .where((element) => element.isVisible == true)
         .toList()
         .asMap()
@@ -302,13 +334,27 @@ class _MyHomePageState extends State<MyHomePage> {
           (value.isDone! ? ' ✓ ' : ' ☐ ') +
           value.text! +
           '\n';
+      if (value.tasks!.isNotEmpty) {
+        final listTasks =
+            value.tasks!.where((element) => element.isVisible == true).toList();
+        if (listTasks.isNotEmpty) {
+          for (var task in listTasks) {
+            res = res +
+                (task.isDone! ? '     ✓ ' : '     ☐ ') +
+                task.text! +
+                '\n';
+          }
+        }
+      }
     });
-
-    Clipboard.setData(ClipboardData(text: res));
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('All tasks copied to buffer'),
-      duration: Duration(milliseconds: 500),
-    ));
+    log(res);
+    if (res.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: res));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('All tasks copied to buffer'),
+        duration: Duration(milliseconds: 500),
+      ));
+    }
   }
 
   void showDeleteMsgDialog(int index) {
@@ -325,7 +371,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   child: const Text('Cancel')),
               TextButton(
                   onPressed: () {
-                    selectedGroup!.tasks!.removeAt(index);
+                    selectedFolder!.tasks!.removeAt(index);
                     setState(() {});
                     saveTasks();
 
@@ -337,12 +383,12 @@ class _MyHomePageState extends State<MyHomePage> {
         });
   }
 
-  void showDeleteGroupDialog(GroupModel model) {
+  void showDeleteGroupDialog(FolderModel model) {
     showDialog(
         context: context,
         builder: (ctx) {
           return AlertDialog(
-            title: Text('DELETE "${model.text ?? ''}" ?'),
+            title: Text('DELETE "${model.title ?? ''}" ?'),
             actions: [
               TextButton(
                   onPressed: () {
@@ -352,7 +398,7 @@ class _MyHomePageState extends State<MyHomePage> {
               TextButton(
                   onPressed: () {
                     list.remove(model);
-                    selectedGroup = null;
+                    selectedFolder = null;
                     setState(() {});
                     saveTasks();
 
@@ -374,6 +420,8 @@ class _MyHomePageState extends State<MyHomePage> {
             content: Padding(
               padding: const EdgeInsets.all(8.0),
               child: TextField(
+                onEditingComplete: () => addGroup(title),
+                autofocus: true,
                 onChanged: (text) {
                   title = text;
                 },
@@ -391,17 +439,19 @@ class _MyHomePageState extends State<MyHomePage> {
                   },
                   child: const Text('Cancel')),
               TextButton(
-                  onPressed: () {
-                    final groupModel = GroupModel(text: title, tasks: []);
-                    list.add(groupModel);
-                    selectedGroup = groupModel;
-                    setState(() {});
-                    Navigator.pop(context);
-                    Navigator.pop(context);
-                  },
-                  child: const Text('OK')),
+                  onPressed: () => addGroup(title), child: const Text('OK')),
             ],
           );
         });
+  }
+
+  void addGroup(String title) {
+    final folderModel = FolderModel(title: title, tasks: []);
+    list.add(folderModel);
+    selectedFolder = folderModel;
+    saveTasks();
+    setState(() {});
+    Navigator.pop(context);
+    Navigator.pop(context);
   }
 }
