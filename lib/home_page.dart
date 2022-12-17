@@ -10,7 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:todo_task/dao/tasks_dao.dart';
+import 'package:todo_task/model/user_model.dart';
 import 'package:todo_task/utils/clipboard_utils.dart';
+import 'dao/auth_dao.dart';
 import 'main.dart';
 import 'model/folder_model.dart';
 import 'model/group_model.dart';
@@ -31,7 +33,8 @@ class _MyHomePageState extends State<MyHomePage> {
   List<FolderModel> list = [];
   FolderModel? selectedFolder;
   late TasksDao tasksDao;
-  User? user;
+  late AuthDao authDao;
+  UserModel? userModel;
   late ScrollController scrollController;
   void deleteAll() {
     tasksDao.removeAll();
@@ -76,22 +79,19 @@ class _MyHomePageState extends State<MyHomePage> {
       //  scope: 'email',ws://127.0.0.1:56710/7f4HmGG5B0I=/ws
       scope: 'email');
 
-  Future<void> test() async {
+  Future<void> signUp() async {
     try {
-      final result = await DesktopWebviewAuth.signIn(googleSignInArgs)
-          .onError((error, stackTrace) {
-        log(error.toString());
-      });
+      final result = await DesktopWebviewAuth.signIn(googleSignInArgs);
 
-      // print(result?.accessToken);
-      // print(result?.tokenSecret);
       final credential =
           GoogleAuthProvider.credential(accessToken: result?.accessToken);
       final credinal =
           await FirebaseAuth.instance.signInWithCredential(credential);
-      user = credinal.user;
-      setState(() {});
-      print(user?.uid);
+      if (credinal.user != null) {
+        userModel = UserModel.fromUser(credinal.user!);
+        authDao.saveUserModel(userModel!);
+        setState(() {});
+      }
     } catch (err) {
       // something went wrong
     }
@@ -101,10 +101,19 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     scrollController = ScrollController();
     tasksDao = TasksDao.instance;
+    authDao = AuthDao();
 
     initTask();
-
+    initUser();
     super.initState();
+  }
+
+  Future<void> initUser() async {
+    final user = await authDao.getLoggedUser();
+    if (user != null) {
+      userModel = user;
+      setState(() {});
+    }
   }
 
   @override
@@ -132,9 +141,9 @@ class _MyHomePageState extends State<MyHomePage> {
                         height: 40,
                         width: 40,
                         color: Colors.grey,
-                        child: user == null
-                            ? InkWell(onTap: test, child: const FlutterLogo())
-                            : Image.network(user!.photoURL ?? ''),
+                        child: userModel == null
+                            ? InkWell(onTap: signUp, child: const FlutterLogo())
+                            : Image.network(userModel!.imageUrl),
                       ),
                     ),
                     const SizedBox(
@@ -144,16 +153,16 @@ class _MyHomePageState extends State<MyHomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          user == null ? 'name' : user!.displayName ?? 'none',
+                          userModel == null ? 'name' : userModel!.name,
                           //style: TextStyle(color: Colors.grey),
                         ),
-                        SizedBox(
+                        const SizedBox(
                           height: 8,
                         ),
                         Text(
-                          user == null
+                          userModel == null
                               ? 'email@test.com'
-                              : user!.email ?? 'none',
+                              : userModel!.email,
 
                           // style: TextStyle(color: Colors.grey),
                         ),
@@ -161,9 +170,9 @@ class _MyHomePageState extends State<MyHomePage> {
                     )
                   ],
                 ),
-                if (user != null)
+                if (userModel != null)
                   Text(
-                    'UID: ${user!.uid}',
+                    'UID: ${userModel!.uid}',
                     //style: TextStyle(color: Colors.grey),
                   ),
                 Divider(
