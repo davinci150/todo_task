@@ -1,11 +1,12 @@
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:todo_task/model/group_model.dart';
+import 'package:todo_task/utils/clipboard_utils.dart';
+import 'package:todo_task/widget/text_field_widget.dart';
 import '../model/task_model.dart';
+import 'custom_check_box.dart';
 import 'expandable_section.dart';
 
 class TextItemWidget extends StatefulWidget {
@@ -28,8 +29,14 @@ class TextItemWidget extends StatefulWidget {
 
 class _TextItemWidgetState extends State<TextItemWidget> {
   bool isExpand = true;
+  Timer? _debounce;
+
   @override
   Widget build(BuildContext context) {
+    final listDone = widget.model.tasks!.map((e) => e.isDone!);
+    bool isDoneGroup =
+        listDone.isEmpty ? widget.model.isDone! : !listDone.contains(false);
+
     return Container(
       padding: widget.model.tasks!.isEmpty ? null : const EdgeInsets.all(8),
       margin: widget.model.tasks!.isEmpty
@@ -53,39 +60,38 @@ class _TextItemWidgetState extends State<TextItemWidget> {
                   index: widget.index,
                   child: Icon(
                     Icons.drag_handle,
-                    color:
-                        Theme.of(context).iconTheme.color?.withOpacity(0.3),
+                    color: Theme.of(context).iconTheme.color?.withOpacity(0.3),
                     size: 16,
                   ),
                 ),
               ),
               CheckboxCustom(
-                onChanged: (value) {
-                  final newModel = widget.model
-                      .copyWith(isDone: value, isVisible: value != null);
+                onChanged: widget.model.tasks!.isEmpty
+                    ? (value) {
+                        final newModel = widget.model
+                            .copyWith(isDone: value, isVisible: value != null);
 
-                  widget.onChanged(newModel);
-                },
+                        widget.onChanged(newModel);
+                      }
+                    : null,
                 disabled: widget.model.isVisible == false,
-                value: widget.model.isDone,
+                value: isDoneGroup,
               ),
               const SizedBox(width: 6),
-              Expanded(
-                child: TextFormField(
-                  maxLines: null,
-                  initialValue: widget.model.text,
-                  onChanged: (text) {
+              TextFieldWidget(
+                initialValue: widget.model.text,
+                decoration: isDoneGroup ? TextDecoration.lineThrough : null,
+                onChanged: (text) {
+                  onTextChange(() {
                     final newModel = widget.model.copyWith(text: text);
                     widget.onChanged(newModel);
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Enter the text',
-                    hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5)),
-                    contentPadding: const EdgeInsets.fromLTRB(0, 2, 0, 0),
-                    isDense: true,
-                    border: InputBorder.none,
-                  ),
-                ),
+                  });
+                },
+                textColor: widget.model.isDone! ||
+                        isDoneGroup ||
+                        widget.model.isVisible == false
+                    ? const Color(0xFF5F5e63)
+                    : null,
               ),
               if (widget.model.tasks!.isNotEmpty)
                 Padding(
@@ -181,6 +187,7 @@ class _TextItemWidgetState extends State<TextItemWidget> {
                               final newModel =
                                   widget.model.copyWith(tasks: tasks);
                               widget.onChanged(newModel);
+                              setState(() {});
                             },
                             disabled: item.isVisible == false,
                             value: item.isDone,
@@ -188,43 +195,26 @@ class _TextItemWidgetState extends State<TextItemWidget> {
                           const SizedBox(width: 6),
                         ],
                       ),
-                      Expanded(
-                        child: TextFormField(
+                      TextFieldWidget(
                           key: ValueKey(item.id),
-                          maxLines: null,
-                          initialValue: item.text,
                           onChanged: (text) {
-                            final newTask = item.copyWith(text: text);
-                            final tasks = List.of(widget.model.tasks!)
-                              ..[i] = newTask;
-                            final newModel =
-                                widget.model.copyWith(tasks: tasks);
-                            widget.onChanged(newModel);
+                            onTextChange(() {
+                              final newTask = item.copyWith(text: text);
+                              final tasks = List.of(widget.model.tasks!)
+                                ..[i] = newTask;
+                              final newModel =
+                                  widget.model.copyWith(tasks: tasks);
+                              widget.onChanged(newModel);
+                            });
                           },
-                          decoration: InputDecoration(
-                            hintText: 'Enter the text',
-                            hintStyle: TextStyle(
-                                color: Colors.grey.withOpacity(0.5)),
-                            contentPadding:
-                                const EdgeInsets.fromLTRB(0, 2, 0, 0),
-                            isDense: true,
-                            border: InputBorder.none,
-                          ),
-                        ),
-                      ),
+                          decoration:
+                              item.isDone! ? TextDecoration.lineThrough : null,
+                          initialValue: item.text,
+                          textColor: item.isDone! || item.isVisible == false
+                              ? const Color(0xFF5F5e63)
+                              : null),
                       InkWell(
-                        onTap: () {
-                          if (item.text!.isEmpty) {
-                            final tasks = List.of(widget.model.tasks!)
-                              ..removeAt(i);
-                            final newGroup =
-                                widget.model.copyWith(tasks: tasks);
-
-                            widget.onChanged(newGroup);
-                          } else {
-                            showDeleteMsgDialog(item, i);
-                          }
-                        },
+                        onTap: () => deleteTask(item, i),
                         child: Icon(
                           Icons.close,
                           color: Colors.red.withOpacity(0.4),
@@ -242,116 +232,73 @@ class _TextItemWidgetState extends State<TextItemWidget> {
     );
   }
 
+  void deleteTask(TaskModel item, int index) {
+    if (item.text!.isEmpty) {
+      final tasks = List.of(widget.model.tasks!)..removeAt(index);
+      final newGroup = widget.model.copyWith(tasks: tasks);
+
+      widget.onChanged(newGroup);
+    } else {
+      showDeleteMsgDialog(item, index);
+    }
+  }
+
   void showDeleteMsgDialog(TaskModel model, int index) {
     showDialog(
         context: context,
         builder: (ctx) {
-          return AlertDialog(
-            title: const Text('DELETE?'),
-            actions: [
-              TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Cancel')),
-              TextButton(
-                  onPressed: () {
-                    final tasks = List.of(widget.model.tasks!)..removeAt(index);
-                    final newGroup = widget.model.copyWith(tasks: tasks);
+          return Focus(
+            autofocus: true,
+            onKey: (node, event) {
+              if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
+                final tasks = List.of(widget.model.tasks!)..removeAt(index);
+                final newGroup = widget.model.copyWith(tasks: tasks);
 
-                    widget.onChanged(newGroup);
+                widget.onChanged(newGroup);
 
-                    Navigator.pop(context);
-                  },
-                  child: const Text('OK')),
-            ],
+                Navigator.pop(context);
+              }
+              return KeyEventResult.ignored;
+            },
+            child: AlertDialog(
+              title: const Text('DELETE?'),
+              actions: [
+                TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Cancel')),
+                TextButton(
+                    onPressed: () {
+                      final tasks = List.of(widget.model.tasks!)
+                        ..removeAt(index);
+                      final newGroup = widget.model.copyWith(tasks: tasks);
+
+                      widget.onChanged(newGroup);
+
+                      Navigator.pop(context);
+                    },
+                    child: const Text('OK')),
+              ],
+            ),
           );
         });
   }
 
   void copyToCliboard() {
-    String res = '';
-
-    res = res + widget.model.text! + '\n';
-    if (widget.model.tasks!.isNotEmpty) {
-      final listTasks = widget.model.tasks!
-          .where((element) => element.isVisible == true)
-          .toList();
-      if (listTasks.isNotEmpty) {
-        for (var task in listTasks) {
-          res = res + (task.isDone! ? '✓ ' : '☐ ') + task.text! + '\n';
-        }
-      }
-    }
-    log(res);
-    if (res.isNotEmpty) {
-      Clipboard.setData(ClipboardData(text: res));
+    bool hasData = ClipboardUtils.copyGroupToClipboard(widget.model);
+    if (hasData) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('All tasks copied to buffer'),
+        content: Text('Group copied to buffer'),
         duration: Duration(milliseconds: 500),
       ));
     }
   }
-}
 
-//  void onTextChange(VoidCallback function) {
-//    _debounce?.cancel();
-//    _debounce = Timer(const Duration(milliseconds: 400), () {
-//      _bloc.add(AttachmentDialogSearchEvent(text));
-//    });
-//  }
-class CheckboxCustom extends StatefulWidget {
-  const CheckboxCustom({
-    Key? key,
-    required this.value,
-    required this.disabled,
-    required this.onChanged,
-  }) : super(key: key);
-
-  final bool? disabled;
-  final bool? value;
-  final void Function(bool?) onChanged;
-
-  @override
-  State<CheckboxCustom> createState() => _CheckboxCustomState();
-}
-
-class _CheckboxCustomState extends State<CheckboxCustom> {
-  bool? curValue;
-  late IconData icon;
-
-  @override
-  void initState() {
-    curValue = widget.value;
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.disabled == true) {
-      icon = Icons.visibility_off;
-    } else {
-      if (curValue == true) {
-        icon = Icons.check_circle;
-      } else {
-        icon = Icons.radio_button_unchecked_outlined;
-      }
-    }
-    return GestureDetector(
-      onLongPress: () {
-        widget.onChanged(null);
-        setState(() {});
-      },
-      onTap: () {
-        if (widget.disabled == false) {
-          curValue = !curValue!;
-        }
-
-        widget.onChanged(curValue);
-        setState(() {});
-      },
-      child: Icon(icon,
-          size: 16, color: widget.disabled == false ? null : Colors.grey),
-    );
+  void onTextChange(VoidCallback function) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 450), () {
+      function();
+    });
   }
 }

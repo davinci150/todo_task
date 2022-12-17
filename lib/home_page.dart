@@ -1,13 +1,16 @@
 import 'dart:convert';
 import 'dart:developer';
-
+import 'package:desktop_webview_auth/desktop_webview_auth.dart';
+import 'package:desktop_webview_auth/google.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:todo_task/dao/tasks_dao.dart';
+import 'package:todo_task/utils/clipboard_utils.dart';
 import 'main.dart';
 import 'model/folder_model.dart';
 import 'model/group_model.dart';
@@ -27,11 +30,11 @@ const selectedGroupKey = kDebugMode ? 'selectedGroupV1' : 'selectedGroupV1';
 class _MyHomePageState extends State<MyHomePage> {
   List<FolderModel> list = [];
   FolderModel? selectedFolder;
-  SharedPreferences? prefs;
-
+  late TasksDao tasksDao;
+  User? user;
   late ScrollController scrollController;
   void deleteAll() {
-    prefs!.remove(taskKey);
+    tasksDao.removeAll();
     list.clear();
     selectedFolder = null;
     setState(() {});
@@ -63,14 +66,44 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  final googleSignInArgs = GoogleSignInArgs(
+      clientId:
+          '668468006082-h76emhnpea6kq2lmv043ptlq7298qdq9.apps.googleusercontent.com',
+      redirectUri: //'https://localhost:59892/',
+          //'https://todo-dcf3a.firebaseapp.com/__/auth/action?mode=action&oobCode=code'
+          'https://todo-dcf3a.firebaseapp.com/__/auth/handler',
+      // 'https://react-native-firebase-testing.firebaseapp.com/__/auth/handler',
+      //  scope: 'email',ws://127.0.0.1:56710/7f4HmGG5B0I=/ws
+      scope: 'email');
+
+  Future<void> test() async {
+    try {
+      final result = await DesktopWebviewAuth.signIn(googleSignInArgs)
+          .onError((error, stackTrace) {
+        log(error.toString());
+      });
+
+      // print(result?.accessToken);
+      // print(result?.tokenSecret);
+      final credential =
+          GoogleAuthProvider.credential(accessToken: result?.accessToken);
+      final credinal =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+      user = credinal.user;
+      setState(() {});
+      print(user?.uid);
+    } catch (err) {
+      // something went wrong
+    }
+  }
+
   @override
   void initState() {
     scrollController = ScrollController();
+    tasksDao = TasksDao.instance;
 
-    SharedPreferences.getInstance().then((value) {
-      prefs = value;
-      initTask();
-    });
+    initTask();
+
     super.initState();
   }
 
@@ -93,36 +126,46 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
                 Row(
                   children: [
-                    Container(
-                      height: 40,
-                      width: 40,
-                      decoration: BoxDecoration(
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        height: 40,
+                        width: 40,
                         color: Colors.grey,
-                        borderRadius: BorderRadius.circular(8),
+                        child: user == null
+                            ? InkWell(onTap: test, child: const FlutterLogo())
+                            : Image.network(user!.photoURL ?? ''),
                       ),
-                      child: FlutterLogo(),
                     ),
                     const SizedBox(
                       width: 12,
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
-                          'name',
+                          user == null ? 'name' : user!.displayName ?? 'none',
                           //style: TextStyle(color: Colors.grey),
                         ),
                         SizedBox(
                           height: 8,
                         ),
                         Text(
-                          'email@test.com',
+                          user == null
+                              ? 'email@test.com'
+                              : user!.email ?? 'none',
+
                           // style: TextStyle(color: Colors.grey),
                         ),
                       ],
                     )
                   ],
                 ),
+                if (user != null)
+                  Text(
+                    'UID: ${user!.uid}',
+                    //style: TextStyle(color: Colors.grey),
+                  ),
                 Divider(
                   thickness: 2,
                   color: Theme.of(context).primaryColor,
@@ -251,7 +294,7 @@ class _MyHomePageState extends State<MyHomePage> {
       onTap: () {
         selectedFolder = folderModel;
         final i = list.indexOf(selectedFolder!);
-        prefs?.setInt(selectedGroupKey, i);
+        tasksDao.setSelectedGroup(i);
         setState(() {});
         Navigator.pop(context);
       },
@@ -308,16 +351,10 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void initTask() {
-    final selectedGroupIndex = prefs?.getInt(selectedGroupKey) ?? -1;
+    final selectedGroupIndex = tasksDao.getSelectedGroup();
 
-    List<FolderModel> result = [];
-    final jsonStr = prefs?.getString(taskKey);
-    if ((jsonStr ?? '').isNotEmpty) {
-      final map = jsonDecode(jsonStr!) as List<dynamic>;
-      for (var value in map) {
-        result.add(FolderModel.fromJson(value as Map<String, dynamic>));
-      }
-    }
+    List<FolderModel> result = tasksDao.getFolders();
+
     if ((result).isNotEmpty && selectedGroupIndex != -1) {
       selectedFolder = result[selectedGroupIndex];
     }
@@ -326,40 +363,12 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void saveTasks() {
-    final saveJson = list.map((e) => e.toJson()).toList();
-    final result = jsonEncode(saveJson);
-    log(list.toString());
-    prefs?.setString(taskKey, result);
+    tasksDao.saveTasks(list);
   }
 
   void copyToCliboard() {
-    String res = '';
-    selectedFolder!.tasks!
-        .where((element) => element.isVisible == true)
-        .toList()
-        .asMap()
-        .forEach((key, value) {
-      res = res +
-          '${key + 1})' +
-          (value.isDone! ? ' ✓ ' : ' ☐ ') +
-          value.text! +
-          '\n';
-      if (value.tasks!.isNotEmpty) {
-        final listTasks =
-            value.tasks!.where((element) => element.isVisible == true).toList();
-        if (listTasks.isNotEmpty) {
-          for (var task in listTasks) {
-            res = res +
-                (task.isDone! ? '       ✓ ' : '       ☐ ') +
-                task.text! +
-                '\n';
-          }
-        }
-      }
-    });
-    log(res);
-    if (res.isNotEmpty) {
-      Clipboard.setData(ClipboardData(text: res));
+    bool hasData = ClipboardUtils.copyFolderToCliboard(selectedFolder!);
+    if (hasData) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('All tasks copied to buffer'),
         duration: Duration(milliseconds: 500),
@@ -371,24 +380,37 @@ class _MyHomePageState extends State<MyHomePage> {
     showDialog(
         context: context,
         builder: (ctx) {
-          return AlertDialog(
-            title: const Text('DELETE?'),
-            actions: [
-              TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Cancel')),
-              TextButton(
-                  onPressed: () {
-                    selectedFolder!.tasks!.remove(model);
-                    setState(() {});
-                    saveTasks();
+          return Focus(
+            autofocus: true,
+            onKey: (node, event) {
+              if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
+                selectedFolder!.tasks!.remove(model);
+                setState(() {});
+                saveTasks();
 
-                    Navigator.pop(context);
-                  },
-                  child: const Text('OK')),
-            ],
+                Navigator.pop(context);
+              }
+              return KeyEventResult.ignored;
+            },
+            child: AlertDialog(
+              title: const Text('DELETE?'),
+              actions: [
+                TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Cancel')),
+                TextButton(
+                    onPressed: () {
+                      selectedFolder!.tasks!.remove(model);
+                      setState(() {});
+                      saveTasks();
+
+                      Navigator.pop(context);
+                    },
+                    child: const Text('OK')),
+              ],
+            ),
           );
         });
   }
@@ -397,26 +419,41 @@ class _MyHomePageState extends State<MyHomePage> {
     showDialog(
         context: context,
         builder: (ctx) {
-          return AlertDialog(
-            title: Text('DELETE "${model.title ?? ''}" ?'),
-            actions: [
-              TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Cancel')),
-              TextButton(
-                  onPressed: () {
-                    list.remove(model);
-                    selectedFolder = null;
-                    prefs?.setInt(selectedGroupKey, -1);
-                    setState(() {});
-                    saveTasks();
+          return Focus(
+            autofocus: true,
+            onKey: (node, event) {
+              if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
+                list.remove(model);
+                selectedFolder = null;
+                tasksDao.setSelectedGroup(-1);
+                setState(() {});
+                saveTasks();
 
-                    Navigator.pop(context);
-                  },
-                  child: const Text('OK')),
-            ],
+                Navigator.pop(context);
+              }
+              return KeyEventResult.ignored;
+            },
+            child: AlertDialog(
+              title: Text('DELETE "${model.title ?? ''}" ?'),
+              actions: [
+                TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Cancel')),
+                TextButton(
+                    onPressed: () {
+                      list.remove(model);
+                      selectedFolder = null;
+                      tasksDao.setSelectedGroup(-1);
+                      setState(() {});
+                      saveTasks();
+
+                      Navigator.pop(context);
+                    },
+                    child: const Text('OK')),
+              ],
+            ),
           );
         });
   }
@@ -461,7 +498,7 @@ class _MyHomePageState extends State<MyHomePage> {
     list.add(folderModel);
     selectedFolder = folderModel;
     final i = list.indexOf(selectedFolder!);
-    prefs?.setInt(selectedGroupKey, i);
+    tasksDao.setSelectedGroup(i);
     saveTasks();
     setState(() {});
     Navigator.pop(context);

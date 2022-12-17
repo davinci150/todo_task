@@ -1,9 +1,16 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import 'package:todo_task/dao/tasks_dao.dart';
 import 'home_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await TasksDao.instance.initialize();
+  await Firebase.initializeApp();
+
   runApp(const MyApp());
 }
 
@@ -70,22 +77,25 @@ class MyThemePreferences {
 
 class ModelTheme extends ChangeNotifier {
   late bool _isDark;
-  late MyThemePreferences _preferences;
+  final MyThemePreferences _preferences = MyThemePreferences();
   bool get isDark => _isDark;
 
   ModelTheme() {
     _isDark = false;
-    _preferences = MyThemePreferences();
-    getPreferences();
+    initialize();
   }
-//Switching the themes
+
+  Future<void> initialize() async {
+    await getPreferences();
+  }
+
   set isDark(bool value) {
     _isDark = value;
     _preferences.setTheme(value);
     notifyListeners();
   }
 
-  getPreferences() async {
+  Future<void> getPreferences() async {
     _isDark = await _preferences.getTheme();
     notifyListeners();
   }
