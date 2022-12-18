@@ -1,22 +1,16 @@
-import 'dart:convert';
-import 'dart:developer';
-import 'package:desktop_webview_auth/desktop_webview_auth.dart';
-import 'package:desktop_webview_auth/google.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:todo_task/dao/tasks_dao.dart';
 import 'package:todo_task/model/user_model.dart';
 import 'package:todo_task/utils/clipboard_utils.dart';
+import 'api/auth_api.dart';
 import 'dao/auth_dao.dart';
 import 'main.dart';
 import 'model/folder_model.dart';
 import 'model/group_model.dart';
-import 'model/task_model.dart';
 import 'widget/task_item_widget.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -69,34 +63,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  final googleSignInArgs = GoogleSignInArgs(
-      clientId:
-          '668468006082-h76emhnpea6kq2lmv043ptlq7298qdq9.apps.googleusercontent.com',
-      redirectUri: //'https://localhost:59892/',
-          //'https://todo-dcf3a.firebaseapp.com/__/auth/action?mode=action&oobCode=code'
-          'https://todo-dcf3a.firebaseapp.com/__/auth/handler',
-      // 'https://react-native-firebase-testing.firebaseapp.com/__/auth/handler',
-      //  scope: 'email',ws://127.0.0.1:56710/7f4HmGG5B0I=/ws
-      scope: 'email');
-
-  Future<void> signUp() async {
-    try {
-      final result = await DesktopWebviewAuth.signIn(googleSignInArgs);
-
-      final credential =
-          GoogleAuthProvider.credential(accessToken: result?.accessToken);
-      final credinal =
-          await FirebaseAuth.instance.signInWithCredential(credential);
-      if (credinal.user != null) {
-        userModel = UserModel.fromUser(credinal.user!);
-        authDao.saveUserModel(userModel!);
-        setState(() {});
-      }
-    } catch (err) {
-      // something went wrong
-    }
-  }
-
   @override
   void initState() {
     scrollController = ScrollController();
@@ -110,6 +76,14 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> initUser() async {
     final user = await authDao.getLoggedUser();
+    if (user != null) {
+      userModel = user;
+      setState(() {});
+    }
+  }
+
+  Future<void> signUp() async {
+    final user = await AuthApi().signUp();
     if (user != null) {
       userModel = user;
       setState(() {});
