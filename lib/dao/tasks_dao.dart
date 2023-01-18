@@ -25,7 +25,7 @@ class TasksDao {
   void saveTasks(List<FolderModel> list) {
     final saveJson = list.map((e) => e.toJson()).toList();
     final result = jsonEncode(saveJson);
-    log(list.toString());
+    //log(list.toString());
     prefs.setString(taskKey, result);
   }
 

@@ -31,8 +31,10 @@ dependencies:
     sdk: flutter
   shared_preferences: ^2.0.15
   intl: ^0.17.0
-  firebase_auth: ^4.1.5
+
+  firebase_auth: ^4.2.3
   firebase_core: ^2.4.0
+  cloud_firestore: ^4.3.0
   desktop_webview_auth: ^0.0.11
   cupertino_icons: ^1.0.2
   provider: ^6.0.4

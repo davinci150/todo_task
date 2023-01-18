@@ -79,6 +79,7 @@ class _TextItemWidgetState extends State<TextItemWidget> {
               ),
               const SizedBox(width: 6),
               TextFieldWidget(
+               // key: ValueKey(widget.model.text),
                 initialValue: widget.model.text,
                 decoration: isDoneGroup ? TextDecoration.lineThrough : null,
                 onChanged: (text) {

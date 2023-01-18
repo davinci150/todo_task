@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:desktop_webview_auth/desktop_webview_auth.dart';
 import 'package:desktop_webview_auth/google.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -25,12 +27,14 @@ class AuthApi {
           GoogleAuthProvider.credential(accessToken: result?.accessToken);
       final credinal =
           await FirebaseAuth.instance.signInWithCredential(credential);
+          log(credential.toString());
       if (credinal.user != null) {
+        log(credinal.user!.toString());
         user = UserModel.fromUser(credinal.user!);
         AuthDao().saveUserModel(user);
       }
     } catch (err) {
-      // something went wrong
+     log(err.toString());
     }
     return user;
   }

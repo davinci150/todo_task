@@ -1,6 +1,8 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 
-class TextFieldWidget extends StatelessWidget {
+class TextFieldWidget extends StatefulWidget {
   const TextFieldWidget({
     Key? key,
     required this.onChanged,
@@ -15,14 +17,38 @@ class TextFieldWidget extends StatelessWidget {
   final Color? textColor;
 
   @override
+  State<TextFieldWidget> createState() => _TextFieldWidgetState();
+}
+
+class _TextFieldWidgetState extends State<TextFieldWidget> {
+  final TextEditingController controller = TextEditingController();
+
+  @override
+  void initState() {
+    controller.text = widget.initialValue ?? '';
+    super.initState();
+  }
+
+  @override
+  void didUpdateWidget(covariant TextFieldWidget oldWidget) {
+    if (controller.text != widget.initialValue) {
+      log(widget.initialValue ?? '');
+      controller.text = widget.initialValue ?? '';
+    }
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: TextFormField(
+      child: TextField(
+        controller: controller,
         style: TextStyle(
-            decorationThickness: 2, decoration: decoration, color: textColor),
+            decorationThickness: 2,
+            decoration: widget.decoration,
+            color: widget.textColor),
         maxLines: null,
-        initialValue: initialValue,
-        onChanged: onChanged,
+        onChanged: widget.onChanged,
         decoration: InputDecoration(
           hintText: 'Enter the text',
           hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5)),

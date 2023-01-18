@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -5,9 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:todo_task/dao/tasks_dao.dart';
 import 'package:todo_task/model/user_model.dart';
+import 'package:todo_task/test_msg.dart';
 import 'package:todo_task/utils/clipboard_utils.dart';
 import 'api/auth_api.dart';
 import 'dao/auth_dao.dart';
+import 'firestore_repository.dart';
 import 'main.dart';
 import 'model/folder_model.dart';
 import 'model/group_model.dart';
@@ -23,6 +26,8 @@ class MyHomePage extends StatefulWidget {
 const taskKey = kDebugMode ? 'testKeyV1' : 'taskKeyV2';
 const selectedGroupKey = kDebugMode ? 'selectedGroupV1' : 'selectedGroupV1';
 
+const String uid = 'mKSkbFBTiteCnZQjVi2QzaZFF0e2';
+
 class _MyHomePageState extends State<MyHomePage> {
   List<FolderModel> list = [];
   FolderModel? selectedFolder;
@@ -30,7 +35,11 @@ class _MyHomePageState extends State<MyHomePage> {
   late AuthDao authDao;
   UserModel? userModel;
   late ScrollController scrollController;
+  String? selectedFolderStr;
+
   void deleteAll() {
+    authDao.deleteUser();
+    userModel = null;
     tasksDao.removeAll();
     list.clear();
     selectedFolder = null;
@@ -38,18 +47,14 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _addTask() {
-    //final taskModel = TaskModel(
-    //    text: '', isDone: false, createdOn: DateTime.now(), isVisible: true);
-    final group = GroupModel(
-        text: '',
-        tasks: [],
-        createdOn: DateTime.now(),
-        isDone: false,
-        isVisible: true);
+    final group = GroupModel.empty();
     selectedFolder!.tasks!.add(group);
     saveTasks();
     setState(() {});
     scrollToBottom(scrollController);
+    //--------------------------------------------
+    collection?.update(
+        {group.createdOn!.millisecondsSinceEpoch.toString(): group.toJson()});
   }
 
   Future scrollToBottom(ScrollController scrollController) async {
@@ -90,15 +95,18 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  DocumentReference<Map<String, dynamic>>? collection;
   @override
   Widget build(BuildContext context) {
+    collection = selectedFolderStr == null
+        ? null
+        : FireStoreRepository.instance.getCollection(selectedFolderStr!);
     return Consumer<ModelTheme>(
         builder: (context, ModelTheme themeNotifier, child) {
       return GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Scaffold(
           drawer: Drawer(
-              //backgroundColor: const Color(0xFFEFEFEF),
               child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Column(
@@ -127,7 +135,11 @@ class _MyHomePageState extends State<MyHomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          userModel == null ? 'name' : userModel!.name,
+                          userModel == null
+                              ? 'name'
+                              : userModel!.name.isEmpty
+                                  ? 'NONE'
+                                  : userModel!.name,
                           //style: TextStyle(color: Colors.grey),
                         ),
                         const SizedBox(
@@ -153,6 +165,25 @@ class _MyHomePageState extends State<MyHomePage> {
                   thickness: 2,
                   color: Theme.of(context).primaryColor,
                 ),
+                StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    stream: FirebaseFirestore.instance
+                        .collection('tasks')
+                        .doc(uid)
+                        .collection('folders')
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.data == null) return const Offstage();
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: snapshot.data!.docs
+                            .map((e) => Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(e.id),
+                                ))
+                            .toList(),
+                      );
+                    }),
                 Column(children: <Widget>[
                   ...list.map(groupItemWidget).toList(),
                   ...[addNewGroupDrawerButton()]
@@ -172,80 +203,87 @@ class _MyHomePageState extends State<MyHomePage> {
                       ? Icons.nightlight_round
                       : Icons.wb_sunny)),
               if (kDebugMode)
-                IconButton(onPressed: deleteAll, icon: Icon(Icons.remove))
+                IconButton(onPressed: deleteAll, icon: const Icon(Icons.remove))
             ],
             title: Text(selectedFolder?.title ?? 'TODO TASK'),
           ),
-          body: selectedFolder == null
-              ? const SizedBox()
-              : ReorderableListView.builder(
-                  scrollController: scrollController,
-                  buildDefaultDragHandles: false,
-                  padding: const EdgeInsets.fromLTRB(0, 10, 0, 80),
-                  itemCount: selectedFolder!
-                      .tasks!.length, // selectedGroup!.tasks!.length,
-                  itemBuilder: (ctx, index) {
-                    final item = selectedFolder!.tasks![index];
-                    return TextItemWidget(
-                        index: index,
-                        key: ValueKey(item),
-                        model: item,
-                        //onTapEnter: _addTask,
-                        onChanged: (newModel) {
-                          selectedFolder!.tasks![index].text = newModel.text;
-                          selectedFolder!.tasks![index].tasks = newModel.tasks;
-                          selectedFolder!.tasks![index].isDone =
-                              newModel.isDone;
-                          selectedFolder!.tasks![index].isVisible =
-                              newModel.isVisible;
-
-                          // item.tasks![i] =
-                          //     model.copyWith(
-                          //         isDone: value, isVisible: value != null);
-                          setState(() {});
-                          saveTasks();
-                        },
-                        //  onTextChange: (text, i) {
-                        //    final model = item.tasks![i];
-                        //    item.tasks![i] =
-                        //        model.copyWith(text: text);
-                        //    saveTasks();
-                        //  },
-                        onTapDelete: () {
-                          if ((item.text ?? '').isEmpty &&
-                              item.tasks!.isEmpty) {
-                            selectedFolder!.tasks!.remove(item);
-                            setState(() {});
-                            saveTasks();
-                          } else {
-                            showDeleteMsgDialog(item);
-                          }
-
-                          // if ((item.tasks![i].title ?? '')
-                          //     .trim()
-                          //     .isEmpty) {
-                          //   list.removeAt(index);
-                          //   setState(() {});
-                          //   saveTasks();
-                          // } else {
-                          //   showDeleteMsgDialog(index);
-                          // }
-                        }
-                        //),
-                        );
-                  },
-                  onReorder: (int oldIndex, int newIndex) {
-                    setState(() {
-                      if (newIndex > oldIndex) {
-                        newIndex -= 1;
-                      }
-                      final item = selectedFolder!.tasks![oldIndex];
-                      selectedFolder!.tasks!.removeAt(oldIndex);
-                      selectedFolder!.tasks!.insert(newIndex, item);
-                    });
-                    saveTasks();
-                  },
+          body: Column(
+            children: [
+              if (selectedFolderStr != null)
+                MyWidget(
+                  folderName: selectedFolderStr!,
+                  key: ValueKey(selectedFolderStr),
                 ),
+              if (selectedFolder != null)
+                StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                    stream: collection?.snapshots(),
+                    builder: (context, snapshot) {
+                      return Expanded(
+                        child: ReorderableListView.builder(
+                          scrollController: scrollController,
+                          buildDefaultDragHandles: false,
+                          padding: const EdgeInsets.fromLTRB(0, 10, 0, 80),
+                          itemCount: selectedFolder!.tasks!.length,
+                          itemBuilder: (ctx, index) {
+                            final item = selectedFolder!.tasks![index];
+                            return TextItemWidget(
+                                index: index,
+                                key: ValueKey(item),
+                                model: item,
+                                onChanged: (newModel) {
+                                  selectedFolder!.tasks![index].text =
+                                      newModel.text;
+                                  selectedFolder!.tasks![index].tasks =
+                                      newModel.tasks;
+                                  selectedFolder!.tasks![index].isDone =
+                                      newModel.isDone;
+                                  selectedFolder!.tasks![index].isVisible =
+                                      newModel.isVisible;
+
+                                  setState(() {});
+                                  saveTasks();
+
+                                  //----------------
+                                  collection?.update({
+                                    item.createdOn!.millisecondsSinceEpoch
+                                        .toString(): newModel.toJson()
+                                  });
+                                },
+                                onTapDelete: () {
+                                  if ((item.text ?? '').isEmpty &&
+                                      item.tasks!.isEmpty) {
+                                    deleteTask(item);
+                                  } else {
+                                    showDeleteTaskDialog(item);
+                                  }
+                                });
+                          },
+                          onReorder: (int oldIndex, int newIndex) {
+                            setState(() {
+                              if (newIndex > oldIndex) {
+                                newIndex -= 1;
+                              }
+
+                              final item = selectedFolder!.tasks![oldIndex];
+                              selectedFolder!.tasks!.removeAt(oldIndex);
+                              selectedFolder!.tasks!.insert(newIndex, item);
+                            });
+                            saveTasks();
+
+                            final map = <String, dynamic>{};
+                            for (final element in selectedFolder!.tasks!) {
+                              map[element.createdOn!.millisecondsSinceEpoch
+                                  .toString()] = element.toJson();
+                            }
+
+                            //     collection?.set({});
+                            collection?.set(Map.of(map));
+                          },
+                        ),
+                      );
+                    }),
+            ],
+          ),
           floatingActionButton: selectedFolder == null
               ? null
               : Row(
@@ -276,6 +314,7 @@ class _MyHomePageState extends State<MyHomePage> {
       borderRadius: BorderRadius.circular(8),
       onTap: () {
         selectedFolder = folderModel;
+        selectedFolderStr = folderModel.title;
         final i = list.indexOf(selectedFolder!);
         tasksDao.setSelectedGroup(i);
         setState(() {});
@@ -340,6 +379,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if ((result).isNotEmpty && selectedGroupIndex != -1) {
       selectedFolder = result[selectedGroupIndex];
+      selectedFolderStr = selectedFolder?.title;
     }
     list = result;
     setState(() {});
@@ -359,7 +399,18 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void showDeleteMsgDialog(GroupModel model) {
+  void deleteTask(GroupModel model) {
+    selectedFolder!.tasks!.remove(model);
+    setState(() {});
+    saveTasks();
+
+    //----------------
+    collection?.update({
+      model.createdOn!.millisecondsSinceEpoch.toString(): FieldValue.delete()
+    });
+  }
+
+  void showDeleteTaskDialog(GroupModel model) {
     showDialog(
         context: context,
         builder: (ctx) {
@@ -379,16 +430,11 @@ class _MyHomePageState extends State<MyHomePage> {
               title: const Text('DELETE?'),
               actions: [
                 TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
+                    onPressed: () => Navigator.pop(context),
                     child: const Text('Cancel')),
                 TextButton(
                     onPressed: () {
-                      selectedFolder!.tasks!.remove(model);
-                      setState(() {});
-                      saveTasks();
-
+                      deleteTask(model);
                       Navigator.pop(context);
                     },
                     child: const Text('OK')),
@@ -396,6 +442,18 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           );
         });
+  }
+
+  void deleteGroup(FolderModel model) {
+    list.remove(model);
+    selectedFolder = null;
+    selectedFolderStr = null;
+    tasksDao.setSelectedGroup(-1);
+    setState(() {});
+    saveTasks();
+
+    collection?.delete();
+    Navigator.pop(context);
   }
 
   void showDeleteGroupDialog(FolderModel model) {
@@ -406,13 +464,7 @@ class _MyHomePageState extends State<MyHomePage> {
             autofocus: true,
             onKey: (node, event) {
               if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
-                list.remove(model);
-                selectedFolder = null;
-                tasksDao.setSelectedGroup(-1);
-                setState(() {});
-                saveTasks();
-
-                Navigator.pop(context);
+                deleteGroup(model);
               }
               return KeyEventResult.ignored;
             },
@@ -425,15 +477,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     },
                     child: const Text('Cancel')),
                 TextButton(
-                    onPressed: () {
-                      list.remove(model);
-                      selectedFolder = null;
-                      tasksDao.setSelectedGroup(-1);
-                      setState(() {});
-                      saveTasks();
-
-                      Navigator.pop(context);
-                    },
+                    onPressed: () => deleteGroup(model),
                     child: const Text('OK')),
               ],
             ),
@@ -480,11 +524,19 @@ class _MyHomePageState extends State<MyHomePage> {
     final folderModel = FolderModel(title: title, tasks: []);
     list.add(folderModel);
     selectedFolder = folderModel;
+    selectedFolderStr = folderModel.title;
     final i = list.indexOf(selectedFolder!);
     tasksDao.setSelectedGroup(i);
     saveTasks();
     setState(() {});
     Navigator.pop(context);
     Navigator.pop(context);
+    //--------------------------------------------
+    FirebaseFirestore.instance
+        .collection('tasks')
+        .doc(uid)
+        .collection('folders')
+        .doc(title)
+        .set({});
   }
 }

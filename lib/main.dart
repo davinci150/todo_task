@@ -8,7 +8,12 @@ import 'home_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await TasksDao.instance.initialize();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+      options: const FirebaseOptions(
+          apiKey: 'AIzaSyC32WB0mGBAEKSVz5ozz7_k2KdlurznicQ',
+          appId: '1:668468006082:ios:2ff7f4830a135bcd79ff5b',
+          messagingSenderId: '',
+          projectId: 'todo-dcf3a'));
 
   runApp(const MyApp());
 }
@@ -24,7 +29,7 @@ class MyApp extends StatelessWidget {
           builder: (context, ModelTheme themeNotifier, child) {
         return MaterialApp(
           title: 'Flutter Demo',
-          theme: themeNotifier.isDark ? darkTheme() : lightTheme(),
+          theme: themeNotifier.isDark ? darkTheme : lightTheme,
           debugShowCheckedModeBanner: false,
           home: const MyHomePage(),
         );
@@ -33,12 +38,13 @@ class MyApp extends StatelessWidget {
   }
 }
 
-ThemeData darkTheme() {
+ThemeData get darkTheme {
   return ThemeData(
       fontFamily: 'Rubik-Regular',
       primaryColor: const Color(0xFF7165ca),
       cardColor: const Color(0xFF282b38),
-      appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF23232b)),
+      appBarTheme:
+          const AppBarTheme(backgroundColor: Color(0xFF23232b), elevation: 0),
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF23232b),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
@@ -47,12 +53,13 @@ ThemeData darkTheme() {
           backgroundColor: Color(0xFF7165ca)));
 }
 
-ThemeData lightTheme() {
+ThemeData get lightTheme {
   return ThemeData(
       textTheme: const TextTheme(),
       fontFamily: 'Rubik-Regular',
       brightness: Brightness.light,
-      appBarTheme: const AppBarTheme(backgroundColor: Colors.blueGrey),
+      appBarTheme:
+          const AppBarTheme(backgroundColor: Colors.blueGrey, elevation: 0),
       primaryColor: Colors.blueGrey,
       iconTheme: const IconThemeData(color: Colors.black),
       scaffoldBackgroundColor: const Color(0xFFEFEFEF),

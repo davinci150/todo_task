@@ -32,6 +32,14 @@ class GroupModel {
     isVisible = json['IsVisible'] != null ? json['IsVisible'] as bool : null;
   }
 
+  GroupModel.empty() {
+    text = '';
+    tasks = [];
+    createdOn = DateTime.now();
+    isDone = false;
+    isVisible = true;
+  }
+
   GroupModel copyWith(
       {String? text,
       List<TaskModel>? tasks,
