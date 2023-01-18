@@ -1,4 +1,4 @@
-import 'dart:developer';
+
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -18,7 +18,7 @@ class AuthDao {
   }
 
   Future<void> saveUserModel(UserModel model) async {
-    log(model.toJson().toString());
+
     final prefs = await SharedPreferences.getInstance();
     prefs.setString(userKey, model.toJson());
   }

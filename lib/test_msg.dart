@@ -1,11 +1,7 @@
-import 'dart:developer';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:todo_task/model/group_model.dart';
-import 'package:todo_task/model/user_model.dart';
+import 'package:todo_task/tasks_repository.dart';
 
-import 'firestore_repository.dart';
 import 'widget/task_item_widget.dart';
 
 class MyWidget extends StatefulWidget {
@@ -20,25 +16,17 @@ class MyWidget extends StatefulWidget {
 class _MyWidgetState extends State<MyWidget> {
   @override
   Widget build(BuildContext context) {
-    final collection =
-        FireStoreRepository.instance.getCollection(widget.folderName);
-
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: collection.snapshots(),
+    if (widget.folderName.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return StreamBuilder<List<GroupModel>?>(
+      stream: TasksRepository.instance.groupsStream(widget.folderName),
       builder: (context, snapshot) {
         if (snapshot.data == null) return const SizedBox();
-        final fsdf = snapshot.data!.data() ?? {};
-       // log(fsdf.toString());
-
-        final List<GroupModel> listGroups = fsdf.isEmpty
-            ? []
-            : fsdf.values
-                .map((e) => GroupModel.fromJson(e as Map<String, dynamic>))
-                .toList();
 
         return Column(children: [
-          ...listGroups.map((e) {
-            final index = listGroups.indexOf(e);
+          ...snapshot.data!.map((e) {
+            final index = snapshot.data!.indexOf(e);
 
             return TextItemWidget(
                 model: e, index: index, onChanged: (gr) {}, onTapDelete: () {});

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:todo_task/dao/tasks_dao.dart';
+import 'package:todo_task/tasks_widget_model.dart';
 import 'home_page.dart';
 
 Future<void> main() async {
@@ -23,6 +24,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final _model = TasksWidgetModel();
     return ChangeNotifierProvider(
       create: (_) => ModelTheme(),
       child: Consumer<ModelTheme>(
@@ -31,7 +33,10 @@ class MyApp extends StatelessWidget {
           title: 'Flutter Demo',
           theme: themeNotifier.isDark ? darkTheme : lightTheme,
           debugShowCheckedModeBanner: false,
-          home: const MyHomePage(),
+          home: TaskWidgetModelProvider(
+            model: _model,
+            child: const MyHomePage(),
+          ),
         );
       }),
     );
@@ -43,6 +48,7 @@ ThemeData get darkTheme {
       fontFamily: 'Rubik-Regular',
       primaryColor: const Color(0xFF7165ca),
       cardColor: const Color(0xFF282b38),
+      drawerTheme: const DrawerThemeData(backgroundColor: Color(0xFF2D2C31)),
       appBarTheme:
           const AppBarTheme(backgroundColor: Color(0xFF23232b), elevation: 0),
       brightness: Brightness.dark,

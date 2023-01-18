@@ -11,8 +11,10 @@
 ///      fonts:
 ///       - asset: fonts/MyFlutterApp.ttf
 ///
-/// 
 ///
+///
+// ignore_for_file: constant_identifier_names
+
 import 'package:flutter/widgets.dart';
 
 class MyFlutterApp {
@@ -21,5 +23,6 @@ class MyFlutterApp {
   static const _kFontFam = 'MyFlutterApp';
   static const String? _kFontPkg = null;
 
-  static const IconData check_box_outline = IconData(0xe801, fontFamily: _kFontFam, fontPackage: _kFontPkg);
+  static const IconData check_box_outline =
+      IconData(0xe801, fontFamily: _kFontFam, fontPackage: _kFontPkg);
 }

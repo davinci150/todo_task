@@ -1,41 +1,34 @@
-import 'package:todo_task/model/group_model.dart';
-
 class FolderModel {
   FolderModel({
     required this.title,
-    required this.tasks,
+    required this.createdOn,
   });
 
   String? title;
-  List<GroupModel>? tasks;
+  DateTime? createdOn;
 
   FolderModel.fromJson(Map<String, dynamic> json) {
     title = json['Title'] as String;
-    final tas = <GroupModel>[];
-    if (json['Folder'] != null) {
-      json['Folder'].forEach((dynamic v) {
-        final GroupModel model = GroupModel.fromJson(v as Map<String, dynamic>);
-        tas.add(model);
-      });
-    }
-    tasks = tas;
+    createdOn = json['CreatedOn'] is int
+        ? DateTime.fromMillisecondsSinceEpoch(json['CreatedOn'] as int)
+        : null;
   }
 
-  FolderModel copyWith({String? title, List<GroupModel>? tasks}) {
+  FolderModel copyWith({String? title, DateTime? createdOn}) {
     return FolderModel(
       title: title ?? this.title,
-      tasks: tasks ?? this.tasks,
+      createdOn: createdOn ?? this.createdOn,
     );
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['Title'] = title;
-    data['Folder'] = tasks?.map((e) => e.toJson()).toList();
+    data['CreatedOn'] = createdOn?.millisecondsSinceEpoch;
 
     return data;
   }
 
   @override
-  String toString() => 'FolderModel{title: $title, tasks: $tasks}';
+  String toString() => 'FolderModel{title: $title, createdOn: $createdOn}';
 }

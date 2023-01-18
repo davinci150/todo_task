@@ -1,4 +1,3 @@
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 
@@ -32,7 +31,7 @@ class _TextFieldWidgetState extends State<TextFieldWidget> {
   @override
   void didUpdateWidget(covariant TextFieldWidget oldWidget) {
     if (controller.text != widget.initialValue) {
-      log(widget.initialValue ?? '');
+   
       controller.text = widget.initialValue ?? '';
     }
     super.didUpdateWidget(oldWidget);

@@ -1,13 +1,10 @@
-import 'dart:developer';
-
 import 'package:flutter/services.dart';
-import 'package:todo_task/model/folder_model.dart';
 import 'package:todo_task/model/group_model.dart';
 
 class ClipboardUtils {
-  static bool copyFolderToCliboard(FolderModel model) {
+  static bool copyFolderToCliboard(List<GroupModel> tasks) {
     String res = '';
-    model.tasks!
+    tasks
         .where((element) => element.isVisible == true)
         .toList()
         .asMap()
@@ -30,7 +27,7 @@ class ClipboardUtils {
         }
       }
     });
-    log(res);
+
     if (res.isNotEmpty) {
       Clipboard.setData(ClipboardData(text: res));
       return true;
