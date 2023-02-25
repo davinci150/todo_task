@@ -1,10 +1,13 @@
+import 'dart:io';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:provider/provider.dart';
 import 'package:todo_task/dao/tasks_dao.dart';
 import 'package:todo_task/tasks_widget_model.dart';
+import 'context_provider.dart';
 import 'home_page.dart';
+import 'themes.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +19,7 @@ Future<void> main() async {
           messagingSenderId: '',
           projectId: 'todo-dcf3a'));
 
-  runApp(const MyApp());
+  runApp(ThemeModelProvider(model: ModelTheme(), child: const MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -24,54 +27,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final _model = TasksWidgetModel();
-    return ChangeNotifierProvider(
-      create: (_) => ModelTheme(),
-      child: Consumer<ModelTheme>(
-          builder: (context, ModelTheme themeNotifier, child) {
-        return MaterialApp(
-          title: 'Flutter Demo',
-          theme: themeNotifier.isDark ? darkTheme : lightTheme,
-          debugShowCheckedModeBanner: false,
-          home: TaskWidgetModelProvider(
-            model: _model,
-            child: const MyHomePage(),
-          ),
-        );
-      }),
-    );
+    final theme = ThemeModelProvider.watch(context)?.model;
+
+    return MaterialApp(
+        title: 'Flutter Demo',
+        navigatorKey: navigatorKey,
+        theme: theme?.isDark == true ? darkTheme : lightTheme,
+        debugShowCheckedModeBanner: false,
+        home: const HomePageWrapper());
   }
 }
 
-ThemeData get darkTheme {
-  return ThemeData(
-      fontFamily: 'Rubik-Regular',
-      primaryColor: const Color(0xFF7165ca),
-      cardColor: const Color(0xFF282b38),
-      drawerTheme: const DrawerThemeData(backgroundColor: Color(0xFF2D2C31)),
-      appBarTheme:
-          const AppBarTheme(backgroundColor: Color(0xFF23232b), elevation: 0),
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF23232b),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(20))),
-          backgroundColor: Color(0xFF7165ca)));
-}
-
-ThemeData get lightTheme {
-  return ThemeData(
-      textTheme: const TextTheme(),
-      fontFamily: 'Rubik-Regular',
-      brightness: Brightness.light,
-      appBarTheme:
-          const AppBarTheme(backgroundColor: Colors.blueGrey, elevation: 0),
-      primaryColor: Colors.blueGrey,
-      iconTheme: const IconThemeData(color: Colors.black),
-      scaffoldBackgroundColor: const Color(0xFFEFEFEF),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Colors.blueGrey));
-}
+bool isDesktop = !Platform.isAndroid && !Platform.isIOS;
 
 class MyThemePreferences {
   static const themeKey = "theme_key";
@@ -99,6 +66,11 @@ class ModelTheme extends ChangeNotifier {
 
   Future<void> initialize() async {
     await getPreferences();
+  }
+
+  void changeTheme() {
+    isDark ? isDark = false : isDark = true;
+    notifyListeners();
   }
 
   set isDark(bool value) {

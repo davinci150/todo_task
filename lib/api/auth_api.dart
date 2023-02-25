@@ -25,11 +25,13 @@ class AuthApi {
 
       final credential =
           GoogleAuthProvider.credential(accessToken: result?.accessToken);
-      final credinal =
-          await FirebaseAuth.instance.signInWithCredential(credential);
+      //final credinal =
+      await FirebaseAuth.instance.signInWithCredential(credential);
 
-      if (credinal.user != null) {
-        user = UserModel.fromUser(credinal.user!);
+      User? firebaseUser = FirebaseAuth.instance.currentUser;
+      print(firebaseUser.toString());
+      if (firebaseUser != null) {
+        user = UserModel.fromUser(firebaseUser);
         AuthDao().saveUserModel(user);
       }
     } catch (err) {

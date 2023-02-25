@@ -17,7 +17,7 @@ class TasksDao {
   static const folderKeys = kDebugMode ? 'folderKeysDebugV1' : 'folderKeysV1';
 
   static const selectedGroupKey =
-      kDebugMode ? 'selectedGroupTestV1' : 'selectedGroupV1';
+      kDebugMode ? 'selectedGroupTestV2' : 'selectedGroupV2';
 
   Future<void> initialize() async {
     prefs = await SharedPreferences.getInstance();
@@ -30,12 +30,16 @@ class TasksDao {
     prefs.setString(folderKey, result);
   }
 
-  void setSelectedGroup(int id) {
-    prefs.setInt(selectedGroupKey, id);
+  void setSelectedGroup(String? id) {
+    if (id == null) {
+      prefs.remove(selectedGroupKey);
+    } else {
+      prefs.setString(selectedGroupKey, id);
+    }
   }
 
-  int getSelectedGroup() {
-    return prefs.getInt(selectedGroupKey) ?? -1;
+  String? getSelectedGroup() {
+    return prefs.getString(selectedGroupKey);
   }
 
   List<FolderModel>? folders;

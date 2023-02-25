@@ -97,12 +97,12 @@ class _CheckboxCustomState extends State<CheckboxCustom> {
                   color: widget.disabled == false
                       ? const Color(0xFF5F5e63)
                       : const Color(0xFF5F5e63),
-                  size: 18,
+                  size: Theme.of(context).primaryIconTheme.size,
                 )
               : Image.asset(
                   checkBox,
                   key: ValueKey(checkBox),
-                  width: 18,
+                  width: Theme.of(context).primaryIconTheme.size,
                 )),
     );
   }

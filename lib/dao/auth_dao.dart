@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../model/user_model.dart';
 
 class AuthDao {
-  static const userKey = 'user_key';
+  static const userKey = 'user_key0';
 
   Future<UserModel?> getLoggedUser() async {
     UserModel? user;
