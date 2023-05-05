@@ -2,15 +2,15 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
+import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:todo_task/model/group_model.dart';
 
 import '../model/folder_model.dart';
 
+@LazySingleton()
 class TasksDao {
-  TasksDao._();
-
-  static final TasksDao instance = TasksDao._();
+  TasksDao();
 
   late SharedPreferences prefs;
 
@@ -72,7 +72,7 @@ class TasksDao {
     if ((jsonStr ?? '').isNotEmpty) {
       final map = jsonDecode(jsonStr!) as List<dynamic>;
       for (var value in map) {
-        result.add(GroupModel.fromJson(value as Map<String, dynamic>));
+       // result.add(GroupModel.fromJson(value as Map<String, dynamic>));
       }
     }
 

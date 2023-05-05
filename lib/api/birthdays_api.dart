@@ -1,33 +1,54 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:todo_task/model/birthday_model.dart';
+import 'package:injectable/injectable.dart';
 
-import '../dialog/input_text_dialog.dart';
-import '../home_page.dart';
+import '../model/birthday_model.dart';
+import 'auth_api.dart';
 
+@LazySingleton()
 class BirthdaysApi {
+  BirthdaysApi({required this.authApi});
+
+  final AuthApi authApi;
+
   Stream<List<BirthdayModel>> birthdaysStream() {
     return FirebaseFirestore.instance
-        .collection('tasks')
-        .doc(uid)
+        .collection(authApi.getPath)
+        .doc(authApi.getUid)
         .collection('birthdays')
-        .doc('birthdays')
         .snapshots()
         .map((event) {
       final List<BirthdayModel> list = [];
-      event.data()?.forEach((key, value) {
-        list.add(BirthdayModel(name: key, birthday: DateTime.now()));
+      event.docs.forEach((value) {
+        final bd = BirthdayModel.fromJson(value.data(), value.id);
+
+        list.add(bd);
       });
 
       return list;
     });
   }
 
-  void addBirthday(TaskCreated model) {
-    FirebaseFirestore.instance
-        .collection('tasks')
-        .doc(uid)
+  Future<List<BirthdayModel>> getBdays() async {
+    final List<BirthdayModel> bdays = [];
+    final docs = await FirebaseFirestore.instance
+        .collection(authApi.getPath)
+        .doc(authApi.getUid)
         .collection('birthdays')
-        .doc('birthdays')
-        .update({model.text: model.date?.toIso8601String()});
+        .get();
+
+    docs.docs.forEach((event) {
+      final bd = BirthdayModel.fromJson(event.data(), event.id);
+      bdays.add(bd);
+    });
+    return bdays;
+  }
+
+  Future<void> addBirthday(BirthdayModel model) async {
+    await FirebaseFirestore.instance
+        .collection(authApi.getPath)
+        .doc(authApi.getUid)
+        .collection('birthdays')
+        .doc()
+        .set(model.toJson());
   }
 }

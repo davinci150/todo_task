@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/src/foundation/key.dart';
-import 'package:flutter/src/widgets/container.dart';
-import 'package:flutter/src/widgets/framework.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -17,18 +14,18 @@ class _SettingsPageState extends State<SettingsPage> {
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        color: Theme.of(context).drawerTheme.backgroundColor,
+        color: Theme.of(context).backgroundColor,
       ),
       child: Column(
         children: [
           Row(
-            children: [Text('Settings 1')],
+            children: const [Text('Settings 1')],
           ),
           Row(
-            children: [Text('Settings 2')],
+            children: const [Text('Settings 2')],
           ),
           Row(
-            children: [Text('Settings 3')],
+            children: const [Text('Settings 3')],
           ),
         ],
       ),

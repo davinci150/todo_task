@@ -1,22 +1,24 @@
 import 'dart:async';
+import 'package:injectable/injectable.dart';
 import 'package:todo_task/api/birthdays_api.dart';
 import 'package:todo_task/model/birthday_model.dart';
 import 'package:rxdart/rxdart.dart';
 
-import '../dialog/input_text_dialog.dart';
+import '../widgets/dialog/adaptive_dialog.dart';
 
+@LazySingleton()
 class BirthdaysRepository {
-  BirthdaysRepository._();
+  BirthdaysRepository({required this.birthdaysApi});
 
-  static final BirthdaysRepository instance = BirthdaysRepository._();
+  final BirthdaysApi birthdaysApi;
 
   BehaviorSubject<List<BirthdayModel>>? streamBirthdays;
 
   Stream<List<BirthdayModel>?> birthdaysStream() {
-    return BirthdaysApi().birthdaysStream();
+    return birthdaysApi.birthdaysStream();
   }
 
-  void addBirthday(TaskCreated model) {
-    BirthdaysApi().addBirthday(model);
+  void addBirthday(BirthdayModel model) {
+    birthdaysApi.addBirthday(model);
   }
 }

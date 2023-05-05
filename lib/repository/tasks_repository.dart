@@ -2,18 +2,20 @@ import 'dart:async';
 import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:injectable/injectable.dart';
 import 'package:todo_task/model/group_model.dart';
 import 'package:rxdart/rxdart.dart';
-import '../api/firestore_api.dart';
-import '../context_provider.dart';
+import '../api/tasks_api.dart';
+import '../services/context_provider.dart';
 import '../dao/tasks_dao.dart';
-import '../dialog/input_text_dialog.dart';
+import '../widgets/dialog/adaptive_dialog.dart';
 import '../model/folder_model.dart';
 
+@LazySingleton()
 class TasksRepository {
-  TasksRepository._();
-
-  static final TasksRepository instance = TasksRepository._();
+  TasksRepository({required this.taskApi, required this.tasksDao});
+  final TasksApi taskApi;
+  final TasksDao tasksDao;
 
   BehaviorSubject<List<GroupModel>>? streamGroups;
   BehaviorSubject<List<FolderModel>>? streamFolders;
@@ -21,59 +23,48 @@ class TasksRepository {
   String? selectedFolderStr;
 
   Stream<List<FolderModel>?> foldersStream() {
-    final Stream<List<FolderModel>> firestoreStream =
-        TasksApi().foldersStream();
+    final Stream<List<FolderModel>> firestoreStream = taskApi.foldersStream();
 
     streamFolders ??= BehaviorSubject();
 
-    final fold = List.of(TasksDao.instance.getFolders());
+    final fold = List.of(tasksDao.getFolders());
     log('load folder ${fold.length}');
 
     streamFolders!.sink.add(fold);
 
-    return Rx.merge([
+    return firestoreStream;
+    Rx.merge([
       firestoreStream,
       // streamFolders!.stream,
     ]);
   }
 
-  Stream<List<GroupModel>?> groupsStream(String? folderKey) {
-    log('getStream: $folderKey');
-    if (folderKey == null) return Stream.value(null);
+  Stream<GroupWrapper?> groupsStream(FolderModel? folder) {
+    if (folder == null) return Stream.value(null);
     streamGroups ??= BehaviorSubject();
-    final Stream<List<GroupModel>> firestoreStream =
-        TasksApi().getGroups(folderKey).asyncMap((event) async {
-      // for (var element in event) {
-      //   final mod =
-      //       streamGroups!.value.firstWhereOrNull((item) => item == element);
-      //   if (mod == null) {
-      //     await showConflictDialog(streamGroups!.value, event, folderKey);
-      //     break;
-      //   }
-      // }
-      return event;
-    });
+    // final Stream<GroupWrapper> firestoreStream =
+    return taskApi.getGroups(folder);
 
-    if (selectedFolderStr != folderKey) {
+    /*   if (selectedFolderStr != folderKey) {
       selectedFolderStr = folderKey;
-      final list = TasksDao.instance.getGroups(folderKey);
+      final list = tasksDao.getGroups(folderKey);
       log('load list ${list.length}');
 
       streamGroups!.sink.add(list);
-    }
+    } */
     // return Rx.merge([
     //   firestoreStream,
     //   streamGroups!.stream,
     // ]);
-    return Rx.combineLatest2(firestoreStream, streamGroups!.stream,
+    /*  return Rx.combineLatest2(firestoreStream, streamGroups!.stream,
         (List<GroupModel> firestore, List<GroupModel> local) {
       //  if()
       return firestore;
-    });
+    }); */
   }
 
-  Future<void> createTask(String folderName, TaskCreated task) async {
-    log('create task to $folderName');
+  Future<void> createTask(FolderModel folder, GroupModel task) async {
+    log('create task to ${folder.title}');
     // int i = 0;
     // for (var element in streamGroups!.value) {
     //   if (element.indexInList! > i) {
@@ -82,54 +73,53 @@ class TasksRepository {
     // }
     // i++;
 
-    final i = streamGroups!.value.isEmpty
+    /*   final i = streamGroups!.value.isEmpty
         ? 0
         : streamGroups!.value
                 .reduce((value, element) =>
                     value.indexInList! > element.indexInList! ? value : element)
                 .indexInList! +
-            1;
+            1; */
 
-    final group = GroupModel.empty(i)
-        .copyWith(text: task.text, notificationDate: task.date);
-    final list = streamGroups!.value..add(group);
+    /*   final group = GroupModel.empty(i)
+        .copyWith(text: task.text, notificationDate: () => task.date); */
+    /*   final list = streamGroups!.value..add(task);
     streamGroups!.sink.add(list);
 
-    saveTasks(list, folderName);
+    saveTasks(list, folderName); */
 
     //--
-    TasksApi().updateGroups(folderName,
-        {group.createdOn!.millisecondsSinceEpoch.toString(): group.toJson()});
+    taskApi.createGroup(folder, task);
   }
 
-  Future<void> deleteTask(GroupModel model, String folderName) async {
-    log('remove task $folderName');
+  Future<void> deleteTask(List<GroupModel> tasks, FolderModel folder) async {
+    log('remove task ${folder.title}');
 
-    final list = streamGroups!.value..remove(model);
+    /*   final list = streamGroups!.value..remove(model);
 
     saveTasks(list, folderName);
-    streamGroups!.sink.add(list);
+    streamGroups!.sink.add(list); */
     //--
-    TasksApi().updateGroups(folderName, {
-      model.createdOn!.millisecondsSinceEpoch.toString(): FieldValue.delete()
-    });
+    for (final element in tasks) {
+      taskApi.deleteGroup(folder, element);
+    }
   }
 
   Future<void> createFolder(FolderModel model) async {
     final l = streamFolders!.value..add(model);
     streamFolders!.add(l);
 
-    TasksDao.instance.createFolder(model);
+    tasksDao.createFolder(model);
 
     //--
-    TasksApi().createFolder(model.title);
+    await taskApi.createFolder(model.title);
   }
 
-  Future<void> renameFolder(String title, String folderKey) async {
-    await TasksApi().renameFolder(folderKey, title);
+  Future<void> renameFolder(String title, FolderModel folder) async {
+    await taskApi.renameFolder(folder, title);
   }
 
-  void onChangedGroupModel(String folderName, GroupModel newModel, int index) {
+  void onChangedGroupModel(FolderModel folder, GroupModel newModel, int index) {
     // log(streamGroups!.value.length.toString());
     // final list = streamGroups!.value..[index] = newModel;
 //
@@ -137,23 +127,24 @@ class TasksRepository {
     // streamGroups!.sink.add(list);
 
     //--
-    TasksApi().updateGroups(folderName, {
-      newModel.createdOn!.millisecondsSinceEpoch.toString(): newModel.toJson()
-    });
+    taskApi.onChangeGroupModel(folder, newModel);
+    /*   taskApi.updateGroups(folderName, <String, dynamic>{
+      newModel.createdOn.millisecondsSinceEpoch.toString(): newModel.toJson()
+    }); */
   }
 
-  void deleteGroup(FolderModel model) {
+  void deleteFolder(FolderModel model) {
     final l = streamFolders!.value..remove(model);
     streamFolders!.add(l);
-    TasksDao.instance.deleteFolder(model);
-    TasksDao.instance.setSelectedGroup(null);
+    tasksDao.deleteFolder(model);
+    tasksDao.setSelectedGroup(null);
 
     //--
-    TasksApi().deleteFolder(model.title);
+    taskApi.deleteFolder(model.title);
   }
 
   void onReorder(String folderKey, int oldIndex, int newIndex) {
-    final oldIndexModel = streamGroups!.value[oldIndex];
+    /*  final oldIndexModel = streamGroups!.value[oldIndex];
     final list = List.of(streamGroups!.value)
       ..removeAt(oldIndex)
       ..insert(newIndex, oldIndexModel);
@@ -162,16 +153,16 @@ class TasksRepository {
     streamGroups!.sink.add(list);
 
     //--
-    Map<String, dynamic> map = {};
+    final Map<String, dynamic> map = <String, dynamic>{};
     list.asMap().forEach((key, value) {
-      map[value.createdOn!.millisecondsSinceEpoch.toString()] =
+      map[value.createdOn.millisecondsSinceEpoch.toString()] =
           value.copyWith(indexInList: key).toJson();
     });
-    TasksApi().updateGroups(folderKey, map);
+    taskApi.updateGroups(folderKey, map); */
   }
 
   void saveTasks(List<GroupModel> list, String folderKey) {
-    TasksDao.instance.saveTasks(list, folderKey);
+    tasksDao.saveTasks(list, folderKey);
   }
 
   bool isShowDialog = false;
@@ -179,7 +170,7 @@ class TasksRepository {
       List<GroupModel> firestore, String folderKey) async {
     if (isShowDialog) return;
     isShowDialog = true;
-    showDialog(
+    await showDialog<void>(
         context: navigatorKey.currentContext!,
         builder: (ctx) {
           return AlertDialog(
@@ -193,11 +184,11 @@ class TasksRepository {
                     InkWell(
                       onTap: () {
                         final map = <String, dynamic>{};
-                        for (var element in local) {
-                          map[element.createdOn!.millisecondsSinceEpoch
+                        for (final element in local) {
+                          map[element.createdOn.millisecondsSinceEpoch
                               .toString()] = element.toJson();
                         }
-                        TasksApi().updateGroups(folderKey, map);
+                        // taskApi.updateGroups(folderKey, map);
 
                         Navigator.pop(ctx);
                       },
@@ -220,7 +211,7 @@ class TasksRepository {
                                             : Icons.check_box_outline_blank),
                                         Expanded(
                                             child: Text(
-                                          e.text ?? '',
+                                          e.text,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         )),
@@ -258,7 +249,7 @@ class TasksRepository {
                                             : Icons.check_box_outline_blank),
                                         Expanded(
                                           child: Text(
-                                            e.text ?? '',
+                                            e.text,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),

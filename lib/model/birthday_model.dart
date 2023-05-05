@@ -1,16 +1,23 @@
+import 'package:flutter/material.dart';
+
+@immutable
 class BirthdayModel {
-  BirthdayModel({
-    required this.name,
-    required this.birthday,
+  const BirthdayModel({
+    this.uid,
+    this.name,
+    this.birthday,
   });
 
-  String name;
-  DateTime birthday;
-
-  factory BirthdayModel.fromJson(Map<String, dynamic> json) => BirthdayModel(
+  factory BirthdayModel.fromJson(Map<String, dynamic> json, String uid) =>
+      BirthdayModel(
+        uid: uid,
         name: json['Name'] as String,
         birthday: DateTime.parse(json['Birthday'] as String),
       );
+
+  final String? uid;
+  final String? name;
+  final DateTime? birthday;
 
   BirthdayModel copyWith({String? name, DateTime? birthday}) {
     return BirthdayModel(
@@ -22,14 +29,14 @@ class BirthdayModel {
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['Name'] = name;
-    data['Birthday'] = birthday.toIso8601String();
+    data['Birthday'] = birthday?.toIso8601String();
 
     return data;
   }
 
   @override
   String toString() =>
-      'BirthdayModel{name: $name, birthday: ${birthday.toIso8601String()}}';
+      'BirthdayModel{name: $name, birthday: ${birthday?.toIso8601String()}, uid: ${uid}}';
 
   @override
   bool operator ==(Object other) {

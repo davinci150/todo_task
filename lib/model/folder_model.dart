@@ -1,22 +1,30 @@
+import 'package:flutter/material.dart';
+
+@immutable
 class FolderModel {
-  FolderModel({
+  const FolderModel({
     required this.title,
+    this.ownerUid,
   });
 
-  String title;
+  factory FolderModel.fromJson(Map<String, dynamic> json) => FolderModel(
+        title: json['Title'] as String,
+      );
 
-  factory FolderModel.fromJson(Map<String, dynamic> json) =>
-      FolderModel(title: json['Title'] as String);
+  final String title;
+  final String? ownerUid;
 
-  FolderModel copyWith({String? title}) {
+  FolderModel copyWith({String? title, String? ownerUid}) {
     return FolderModel(
       title: title ?? this.title,
+      ownerUid: ownerUid ?? this.ownerUid,
     );
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['Title'] = title;
+    data['OwnerUid'] = ownerUid;
 
     return data;
   }
@@ -35,5 +43,3 @@ class FolderModel {
   @override
   int get hashCode => title.hashCode;
 }
-
-extension FolderModelExt on FolderModel {}

@@ -40,6 +40,42 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:668468006082:android:941183f42cb9661679ff5b",
+        "android_client_info": {
+          "package_name": "com.example.todo_task"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "668468006082-h76emhnpea6kq2lmv043ptlq7298qdq9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAEklKa9flkKnVKUQyz6uOcEVdzvjgPTd8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "668468006082-h76emhnpea6kq2lmv043ptlq7298qdq9.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "668468006082-2gfaqe0go5dimgqq5jmsr05oies4f19t.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.company.todoapp"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"
