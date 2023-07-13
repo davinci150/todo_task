@@ -1,9 +1,11 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
 import '../api/auth_api.dart';
 import '../model/user_model.dart';
 import '../presentation/app_colors.dart';
+import '../router/router.dart';
 import '../services/context_provider.dart';
 import '../widgets/dialog/adaptive_dialog.dart';
 
@@ -90,7 +92,7 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
               TextField(
                 decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.account_box),
+                  prefixIcon: Icon(CupertinoIcons.person),
                   hintText: 'Name',
                   enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(color: Color(0xFFF1F0F5)),
@@ -121,7 +123,7 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
               TextField(
                 decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.account_balance),
+                  prefixIcon: Icon(CupertinoIcons.envelope),
                   hintText: 'Uname@email.com',
                   enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(color: Color(0xFFF1F0F5)),
@@ -152,7 +154,7 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
               TextField(
                 decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.lock),
+                  prefixIcon: Icon(CupertinoIcons.lock),
                   hintText: 'Password',
                   enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(color: Color(0xFFF1F0F5)),
@@ -203,8 +205,9 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   TextButton(
                     onPressed: () {
-                      Navigator.of(navigatorKeyStart.currentContext!)
-                          .pushNamed('sign_in');
+                      GetIt.I<RouterI>().navigateTo(RouterI.signIn);
+                      /*   Navigator.of(navigatorKey.currentContext!)
+                          .pushNamed('sign_in'); */
                     },
                     child: const Text(
                       'Sign In',

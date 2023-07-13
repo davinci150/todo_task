@@ -1,10 +1,11 @@
 import 'dart:async';
+
 import 'package:injectable/injectable.dart';
-import 'package:todo_task/api/birthdays_api.dart';
-import 'package:todo_task/model/birthday_model.dart';
 import 'package:rxdart/rxdart.dart';
 
-import '../widgets/dialog/adaptive_dialog.dart';
+import '../api/birthdays_api.dart';
+import '../model/birthday_model.dart';
+import '../services/notification_service.dart';
 
 @LazySingleton()
 class BirthdaysRepository {
@@ -18,7 +19,16 @@ class BirthdaysRepository {
     return birthdaysApi.birthdaysStream();
   }
 
-  void addBirthday(BirthdayModel model) {
-    birthdaysApi.addBirthday(model);
+  Future<void> addBirthday(BirthdayModel model) async {
+    final String id = await birthdaysApi.addBirthday(model);
+
+    await NotificationService()
+        .yearlyNotification(id.hashCode, model.birthday!, model.name!);
+  }
+
+  Future<void> deleteBirthday(String id) async {
+    await birthdaysApi.deleteBirthday(id);
+
+    await NotificationService().cancelNotification(id.hashCode);
   }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_neumorphic/flutter_neumorphic.dart';
 import '../../main.dart';
-import '../../model/group_model.dart';
+import '../../model/task_model.dart';
 
 import '../../services/context_provider.dart';
 import 'group_editor.dart';
@@ -107,8 +107,8 @@ class CreateModel {
       });
 } */
 
-Future<GroupModel?> showGroupEditor(GroupModel model) async {
-  return showAdaptiveDialog<GroupModel?>(GroupEditorWidget(groupModel: model));
+Future<TaskModel?> showGroupEditor(TaskModel model) async {
+  return showAdaptiveDialog<TaskModel?>(GroupEditorWidget(groupModel: model));
 }
 
 Future<T?> showAdaptiveDialog<T>(Widget child) async {
@@ -160,7 +160,7 @@ void showDeleteTaskDialog(
             if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
               onTapOK();
 
-              Navigator.pop(context);
+              Navigator.pop(ctx);
             }
             return KeyEventResult.ignored;
           },
@@ -168,13 +168,13 @@ void showDeleteTaskDialog(
             title: Text(title),
             actions: [
               TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.pop(ctx),
                   child: const Text('Cancel')),
               TextButton(
                   onPressed: () {
                     onTapOK();
 
-                    Navigator.pop(context);
+                    Navigator.pop(ctx);
                   },
                   child: const Text('OK')),
             ],
@@ -192,7 +192,7 @@ Future<void> showAlert({required String title}) async {
           autofocus: true,
           onKey: (node, event) {
             if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
-              Navigator.pop(context);
+              Navigator.pop(ctx);
             }
             return KeyEventResult.ignored;
           },
@@ -201,7 +201,7 @@ Future<void> showAlert({required String title}) async {
             actions: [
               TextButton(
                   onPressed: () {
-                    Navigator.pop(context);
+                    Navigator.pop(ctx);
                   },
                   child: const Text('OK')),
             ],

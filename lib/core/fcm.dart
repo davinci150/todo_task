@@ -1,24 +1,26 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+//import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
+import '../api/auth_api.dart';
 import '../services/notification_service.dart';
 
 Future<void> registerNotification() async {
-  final _messaging = FirebaseMessaging.instance;
+ /*  final _messaging = FirebaseMessaging.instance;
 
-  // 3. On iOS, this helps to take the user permissions
-  final NotificationSettings settings = await _messaging.requestPermission(
-    alert: true,
-    badge: true,
-    provisional: false,
-    sound: true,
-  );
-  _messaging.onTokenRefresh.listen((event) {
-    print('### ON REFRESH TOKEN IS: ${event}');
+  final NotificationSettings settings = await _messaging.requestPermission();
+  _messaging.onTokenRefresh.listen((String token) {
+    print('### ON REFRESH TOKEN IS: ${token}');
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(GetIt.I<AuthApi>().getUid!)
+        .update(<String, dynamic>{'Token': token});
   });
-  print('### ${settings.authorizationStatus}');
+  print(
+      '### ${settings.authorizationStatus == AuthorizationStatus.authorized}');
 
 /*
   FirebaseMessaging.onMessageOpenedApp.listen((event) {
@@ -39,9 +41,17 @@ Future<void> registerNotification() async {
       duration: Duration(seconds: 2),
     ); */
   });
-  await _messaging.getToken().then((value) {
-    print('### MY TOKEN IS: ${value}');
-  });
+  await _messaging.getToken().then((token) {
+    print('### MY TOKEN IS: ${token}');
+    print('### MY auth: ${settings.authorizationStatus}');
+    final String? userId = GetIt.I<AuthApi>().getUid;
+    if (userId != null) {
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(GetIt.I<AuthApi>().getUid!)
+          .update(<String, dynamic>{'Token': token});
+    }
+  }); */
   /*  FirebaseMessaging.onBackgroundMessage((message) async {
     // _firebaseMessagingBackgroundHandler(message);
     print('### ON BACKGROUND $message');
@@ -81,7 +91,9 @@ String constructFCMPayload(String? token, String body) {
         'title': "TODO",
       },
       'data': <String, dynamic>{'name': 'fdf'},
-      'to': "/topics/all"
+      'to':
+          'cxzLEmpBRTmgtxwzw28dYm:APA91bEJqVgHvkycRhq2lZJoJlZ1uqexsp2PyABmHkbeUEYi1qrGENy2TGGFucAARL0rQMLNaB65QrV4JCfN7q2yO_y65Df8Ag_4Qrxnr6QYPQeaqE0bBLfZANcZTarnr8fC4ys9JGYV'
+      //"/topics/all"
       //'to': token
       /*  "condition": "'all' in topics || 'android' in topics || 'ios' in topics" */
     },

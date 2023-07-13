@@ -3,7 +3,7 @@ import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:injectable/injectable.dart';
-import 'package:todo_task/model/group_model.dart';
+import 'package:todo_task/model/task_model.dart';
 import 'package:rxdart/rxdart.dart';
 import '../api/tasks_api.dart';
 import '../services/context_provider.dart';
@@ -17,7 +17,7 @@ class TasksRepository {
   final TasksApi taskApi;
   final TasksDao tasksDao;
 
-  BehaviorSubject<List<GroupModel>>? streamGroups;
+  BehaviorSubject<List<TaskModel>>? streamGroups;
   BehaviorSubject<List<FolderModel>>? streamFolders;
 
   String? selectedFolderStr;
@@ -27,10 +27,10 @@ class TasksRepository {
 
     streamFolders ??= BehaviorSubject();
 
-    final fold = List.of(tasksDao.getFolders());
-    log('load folder ${fold.length}');
+    // final fold = List.of(tasksDao.getFolders());
+    //  log('load folder ${fold.length}');
 
-    streamFolders!.sink.add(fold);
+    // streamFolders!.sink.add(fold);
 
     return firestoreStream;
     Rx.merge([
@@ -39,7 +39,7 @@ class TasksRepository {
     ]);
   }
 
-  Stream<GroupWrapper?> groupsStream(FolderModel? folder) {
+  Stream<List<TaskModel>?> groupsStream(FolderModel? folder) {
     if (folder == null) return Stream.value(null);
     streamGroups ??= BehaviorSubject();
     // final Stream<GroupWrapper> firestoreStream =
@@ -63,8 +63,8 @@ class TasksRepository {
     }); */
   }
 
-  Future<void> createTask(FolderModel folder, GroupModel task) async {
-    log('create task to ${folder.title}');
+  Future<void> createTask(FolderModel folder, TaskModel task) async {
+    log('create task to ${folder.name}');
     // int i = 0;
     // for (var element in streamGroups!.value) {
     //   if (element.indexInList! > i) {
@@ -89,11 +89,11 @@ class TasksRepository {
     saveTasks(list, folderName); */
 
     //--
-    taskApi.createGroup(folder, task);
+    await taskApi.createGroup(folder, task);
   }
 
-  Future<void> deleteTask(List<GroupModel> tasks, FolderModel folder) async {
-    log('remove task ${folder.title}');
+  Future<void> deleteTask(List<TaskModel> tasks, FolderModel folder) async {
+    log('remove task ${folder.name}');
 
     /*   final list = streamGroups!.value..remove(model);
 
@@ -105,21 +105,21 @@ class TasksRepository {
     }
   }
 
-  Future<void> createFolder(FolderModel model) async {
-    final l = streamFolders!.value..add(model);
-    streamFolders!.add(l);
+  Future<FolderModel> createFolder(FolderModel model) async {
+    //final l = streamFolders!.value..add(model);
+  //  streamFolders!.add(l);
 
-    tasksDao.createFolder(model);
+    //tasksDao.createFolder(model);
 
     //--
-    await taskApi.createFolder(model.title);
+    return taskApi.createFolder(model.name);
   }
 
   Future<void> renameFolder(String title, FolderModel folder) async {
     await taskApi.renameFolder(folder, title);
   }
 
-  void onChangedGroupModel(FolderModel folder, GroupModel newModel, int index) {
+  void onChangedGroupModel(FolderModel folder, TaskModel newModel, int index) {
     // log(streamGroups!.value.length.toString());
     // final list = streamGroups!.value..[index] = newModel;
 //
@@ -134,13 +134,23 @@ class TasksRepository {
   }
 
   void deleteFolder(FolderModel model) {
-    final l = streamFolders!.value..remove(model);
+  /*   final l = streamFolders!.value..remove(model);
     streamFolders!.add(l);
     tasksDao.deleteFolder(model);
-    tasksDao.setSelectedGroup(null);
+    tasksDao.setSelectedGroup(null); */
 
     //--
-    taskApi.deleteFolder(model.title);
+    taskApi.deleteFolder(model.id);
+  }
+
+  void removeFolderForMe(FolderModel model, String ownerUid) {
+    //final l = streamFolders!.value..remove(model);
+    //streamFolders!.add(l);
+    // tasksDao.deleteFolder(model);
+    // tasksDao.setSelectedGroup(null);
+
+    //--
+    taskApi.removeFolderForMe(model.id, ownerUid);
   }
 
   void onReorder(String folderKey, int oldIndex, int newIndex) {
@@ -161,13 +171,13 @@ class TasksRepository {
     taskApi.updateGroups(folderKey, map); */
   }
 
-  void saveTasks(List<GroupModel> list, String folderKey) {
+  void saveTasks(List<TaskModel> list, String folderKey) {
     tasksDao.saveTasks(list, folderKey);
   }
 
   bool isShowDialog = false;
-  Future<void> showConflictDialog(List<GroupModel> local,
-      List<GroupModel> firestore, String folderKey) async {
+  Future<void> showConflictDialog(List<TaskModel> local,
+      List<TaskModel> firestore, String folderKey) async {
     if (isShowDialog) return;
     isShowDialog = true;
     await showDialog<void>(

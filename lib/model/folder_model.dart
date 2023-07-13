@@ -1,45 +1,45 @@
-import 'package:flutter/material.dart';
+import 'package:equatable/equatable.dart';
 
-@immutable
-class FolderModel {
+class FolderModel extends Equatable {
   const FolderModel({
-    required this.title,
-    this.ownerUid,
+    required this.id,
+    required this.name,
+    required this.createdBy,
+    required this.members,
   });
 
-  factory FolderModel.fromJson(Map<String, dynamic> json) => FolderModel(
-        title: json['Title'] as String,
+  factory FolderModel.fromJson(Map<String, dynamic> json, String id) =>
+      FolderModel(
+        id: id,
+        name: json['Name'] as String,
+        createdBy: json['CreatedBy'] as String,
+        members: (json['Members'] as List<dynamic>).cast<String>(),
       );
 
-  final String title;
-  final String? ownerUid;
+  final String id;
+  final String name;
+  final String createdBy;
+  final List<String> members;
 
-  FolderModel copyWith({String? title, String? ownerUid}) {
+  FolderModel copyWith(
+      {String? name, String? createdBy, String? id, List<String>? members}) {
     return FolderModel(
-      title: title ?? this.title,
-      ownerUid: ownerUid ?? this.ownerUid,
+      id: id ?? this.id,
+      name: name ?? this.name,
+      createdBy: createdBy ?? this.createdBy,
+      members: members ?? this.members,
     );
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
-    data['Title'] = title;
-    data['OwnerUid'] = ownerUid;
+    data['Name'] = name;
+    data['CreatedBy'] = createdBy;
+    data['Members'] = members;
 
     return data;
   }
 
   @override
-  String toString() => 'FolderModel{title: $title}';
-
-  @override
-  bool operator ==(Object other) {
-    if (other is FolderModel) {
-      return title == other.title;
-    }
-    return false;
-  }
-
-  @override
-  int get hashCode => title.hashCode;
+  List<Object> get props => [name, createdBy, id, members];
 }

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../core/fcm.dart';
 import '../main.dart';
 import '../services/context_provider.dart';
-import '../services/notification_service.dart';
-import '../tasks_page/tasks_page.dart';
+import '../widgets/custom_appbar.dart';
 import '../widgets/dialog/adaptive_dialog.dart';
 import 'sidebar/sidebar_widget_model.dart';
 
@@ -16,19 +14,15 @@ class PreviewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final _model = context.read<SidebarWidgetModel>();
     return Scaffold(
-      appBar: isDesktop
-          ? null
-          : CustomAppBar(
-              title: '',
-            ),
+      appBar: isDesktop ? null : const CustomAppBar(title: ''),
       body: Center(
         child: InkWell(
           onTap: () async {
             final title = await inputTextDialog();
             if (title != null && title.isNotEmpty) {
-              _model.addFolder(title);
+              final newFolder = await _model.addFolder(title);
               await Navigator.of(nestedNavigatorKey.currentContext!)
-                  .pushNamed('tasks_page', arguments: title);
+                  .pushNamed('tasks_page', arguments: newFolder);
             }
           },
           child: Row(

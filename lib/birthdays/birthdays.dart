@@ -1,17 +1,18 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
-import 'package:todo_task/birthdays/birthdays_widget_model.dart';
-import 'package:todo_task/widgets/dialog/adaptive_dialog.dart';
 
-import '../api/birthdays_api.dart';
 import '../main.dart';
 import '../model/birthday_model.dart';
 import '../providers/theme_provider.dart';
 import '../services/notification_service.dart';
-import '../tasks_page/tasks_page.dart';
+import '../widgets/custom_appbar.dart';
+import '../widgets/date_picker_widget.dart';
+import '../widgets/dialog/adaptive_dialog.dart';
+import '../widgets/progress_indicator_widget.dart';
+import 'birthdays_widget_model.dart';
+import 'widgets/birthday_card.dart';
 
 class BirthdaysPage extends StatefulWidget {
   const BirthdaysPage({Key? key}) : super(key: key);
@@ -21,179 +22,288 @@ class BirthdaysPage extends StatefulWidget {
 }
 
 class _BirthdaysPageState extends State<BirthdaysPage> {
+  BirthdaysWidgetModel model = BirthdaysWidgetModel();
+
   @override
   Widget build(BuildContext context) {
-    final _model = BirthdaysWidgetModel();
-    return BirthdaysModelProvider(
-      model: _model,
-      child: const BdPage(),
+    return ChangeNotifierProvider<BirthdaysWidgetModel>(
+      create: (_) => model,
+      child: const BirthdaysWidgetBody(),
     );
+  }
+
+  @override
+  void dispose() {
+    model.dispose();
+    super.dispose();
   }
 }
 
-class BdPage extends StatefulWidget {
-  const BdPage({Key? key}) : super(key: key);
+class BirthdaysWidgetBody extends StatefulWidget {
+  const BirthdaysWidgetBody({Key? key}) : super(key: key);
 
   @override
-  State<BdPage> createState() => _BdPageState();
+  State<BirthdaysWidgetBody> createState() => _BirthdaysWidgetBodyState();
 }
 
-class _BdPageState extends State<BdPage> {
+class _BirthdaysWidgetBodyState extends State<BirthdaysWidgetBody> {
+  final labels = [
+    LabelWidget(isActive: true, text: 'All', onTap: () {}),
+    LabelWidget(isActive: false, text: 'Friends', onTap: () {}),
+    LabelWidget(isActive: false, text: 'Work', onTap: () {}),
+    LabelWidget(isActive: false, text: 'Family', onTap: () {}),
+  ];
+
+  List<int> pendingNotificationIds = [];
+
+  @override
+  void initState() {
+    loadPendingNotificationRequests();
+    super.initState();
+  }
+
+  void loadPendingNotificationRequests() {
+    NotificationService().pendingNotificationRequests().then((value) {
+      pendingNotificationIds = value.map((e) => e.id).toList();
+      setState(() {});
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final _model = BirthdaysModelProvider.watch(context)?.model;
-    final colorTheme = context.watch<ModelTheme>().colorTheme;
-    return Scaffold(
-      backgroundColor: isDesktop
-          ? colorTheme.scaffoldDesktopColor
-          : colorTheme.mobileScaffoldColor,
-      appBar: isDesktop ? null : const CustomAppBar(title: 'Bdays'),
-      body: Container(
-        margin: isDesktop ? const EdgeInsets.all(8) : null,
-        decoration: isDesktop
-            ? BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: isDesktop ? colorTheme.mobileScaffoldColor : null,
-              )
-            : null,
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          children: [
-            TextButton(
-                onPressed: () async {
-                  await checkAndSetNotifications();
-                },
-                child: const Text('Set notifications')),
-            TextButton(
-                onPressed: () async {
-                  final list =
-                      await NotificationService().pendingNotificationRequests();
-                  await showAlert(
-                      title:
-                          'Notifications length: ${list.length} \n${list.map((e) => 'id:${e.id}, title:${e.body}')}');
-                },
-                child: const Text('Check notifications')),
-            TextButton(
-                onPressed: () async {
-                  final createModel = await showCreateBirthdayDialog();
+    final _model = context.watch<BirthdaysWidgetModel>();
 
-                  if (createModel != null &&
-                      (createModel.name ?? '').isNotEmpty &&
-                      createModel.birthday != null) {
-                    _model?.addBirthday(createModel);
-                  }
-                },
-                child: const Text('Add birthday')),
-            ..._model!.birthdays.map((BirthdayModel e) {
-              return Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                decoration: const BoxDecoration(
-                    border: Border(bottom: BorderSide(color: Colors.grey))),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(e.name ?? ''),
-                        const Spacer(),
-                        if (e.birthday != null)
-                          Text(DateFormat('dd MMM yyyy').format(e.birthday!)),
-                      ],
-                    ),
-                    Text(
-                      e.uid.hashCode.toString(),
-                      style: const TextStyle(fontSize: 10),
-                    ),
-                  ],
+    final colorTheme = context.watch<ModelTheme>().colorTheme;
+
+    return Scaffold(
+      floatingActionButton: FloatingActionButton(
+          child: const Icon(Icons.add),
+          onPressed: () async {
+            final birthdayModel = await showCreateBirthdayDialog();
+
+            if (birthdayModel.name.isNotEmpty) {
+              _model.addBirthday(birthdayModel);
+            }
+          }),
+      backgroundColor: isDesktop
+          ? colorTheme.mobileScaffoldColor
+          : colorTheme.mobileScaffoldColor,
+      appBar: isDesktop
+          ? null
+          : CustomAppBar(title: 'Birthdays', actions: [
+              IconButton(
+                onPressed: checkAndSetNotifications,
+                icon: const Icon(CupertinoIcons.refresh),
+              )
+            ]),
+      body: Stack(
+        children: [
+          if (_model.birthdays != null)
+            Column(
+              //padding: const EdgeInsets.symmetric(horizontal: 10),
+              children: [
+                const SizedBox(
+                  height: 22,
                 ),
-              );
-            }).toList(),
-          ],
-        ),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  height: 46,
+                  decoration: const BoxDecoration(),
+                  child: TextField(
+                    onChanged: _model.onSearch,
+                    decoration: InputDecoration(
+                        contentPadding: EdgeInsets.zero,
+                        hintStyle: const TextStyle(fontSize: 16),
+                        labelStyle: const TextStyle(fontSize: 16),
+                        prefixIcon: const Icon(CupertinoIcons.search, size: 20),
+                        hintText: 'Search...',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(100))),
+                  ),
+                ),
+                const SizedBox(
+                  height: 22,
+                ),
+                SizedBox(
+                  height: 29,
+                  child: ListView.separated(
+                    physics: const BouncingScrollPhysics(),
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemBuilder: (BuildContext context, int index) {
+                      return labels[index];
+                    },
+                    itemCount: labels.length,
+                    separatorBuilder: (BuildContext context, int index) {
+                      return const SizedBox(width: 8);
+                    },
+                  ),
+                ),
+                const SizedBox(
+                  height: 8,
+                ),
+                Expanded(
+                  child: ListView.separated(
+                      padding: const EdgeInsets.only(
+                          left: 16, right: 16, bottom: 150),
+                      itemBuilder: (context, index) {
+                        final model = _model.birthdays![index];
+
+                        final isShowLabel = index == 0 ||
+                            model.getLabelDate !=
+                                _model.birthdays![index - 1].getLabelDate;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (isShowLabel)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.only(top: 18, bottom: 16),
+                                child: Text(
+                                  model.getLabelDate,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            Opacity(
+                                opacity: pendingNotificationIds
+                                        .contains(model.uid.hashCode)
+                                    ? 1
+                                    : 0.4,
+                                child: BirthdayCardWidget(model: model)),
+                          ],
+                        );
+                      },
+                      separatorBuilder: (context, index) {
+                        return const SizedBox(height: 12);
+                      },
+                      itemCount: _model.birthdays!.length),
+                ),
+                /*    ..._model.birthdays.map((BirthdayModel e) {
+                return BirthdayCardWidget(
+                  model: e,
+                );
+              }).toList(), */
+              ],
+            )
+          else
+            Align(
+              alignment: const Alignment(0, 0.5),
+              child: ProgressIndicatorWidget(
+                size: 30,
+                color: colorTheme.primaryColor,
+              ),
+            ),
+        ],
       ),
     );
   }
 
   Future<void> checkAndSetNotifications() async {
     int count = 0;
-    final bdays = await GetIt.I<BirthdaysApi>().getBdays();
+    final birthdays = context.read<BirthdaysWidgetModel>().birthdays;
 
     final notifications =
         await NotificationService().pendingNotificationRequests();
-    final notifIds = notifications.map((e) => e.id);
+    final notificationIds = notifications.map((e) => e.id);
 
-    for (final item in bdays) {
+    for (final item in birthdays!) {
       final id = item.uid.hashCode;
-      if (!notifIds.contains(id)) {
+      if (!notificationIds.contains(id)) {
         await NotificationService()
-            .yearlyNotification(item.uid.hashCode, item.birthday!, item.name!);
+            .yearlyNotification(item.uid.hashCode, item.birthday, item.name);
         count++;
       }
     }
+    loadPendingNotificationRequests();
     await showAlert(title: 'Add $count new birthdays');
   }
 
-  Future<BirthdayModel?> showCreateBirthdayDialog() async {
-    BirthdayModel birthdayModel = const BirthdayModel();
-    return showModalBottomSheet(
-        context: context,
-        builder: (ctx) {
-          return StatefulBuilder(builder: (context, snapshot) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const SizedBox(
-                  height: 20,
-                ),
-                TextField(
-                  autofocus: true,
-                  decoration: const InputDecoration(hintText: 'Введите имя'),
-                  onChanged: (name) {
-                    birthdayModel = birthdayModel.copyWith(name: name);
-                  },
-                ),
-                TextButton(
-                  onPressed: () async {
-                    DateTime? date = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime.now()
-                            .subtract(const Duration(days: 365 * 1)),
-                        lastDate:
-                            DateTime.now().add(const Duration(days: 365 * 1)));
-                    if (date != null) {
-                      final time = await showTimePicker(
-                          initialTime: TimeOfDay.now(), context: context);
-                      if (time != null) {
-                        date = DateTime(date.year, date.month, date.day,
-                            time.hour, time.minute);
+  Future<BirthdayModel> showCreateBirthdayDialog() async {
+    BirthdayModel birthdayModel = BirthdayModel.empty();
+    DateTime date = DateTime.now();
 
-                        birthdayModel = birthdayModel.copyWith(birthday: date);
-                        snapshot(() {});
-                      }
-                    }
-                  },
-                  child: Text(birthdayModel.birthday == null
-                      ? 'Set date'
-                      : DateFormat('dd MMM yyyy HH:mm')
-                          .format(birthdayModel.birthday!)),
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                      onPressed: () {
-                        Navigator.pop(context, birthdayModel);
+    String errorText = '';
+
+    return showModalBottomSheet<BirthdayModel>(
+            isScrollControlled: true,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            context: context,
+            builder: (ctx) {
+              return StatefulBuilder(builder: (context, state) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    const SizedBox(
+                      height: 20,
+                    ),
+                    TextField(
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        errorText: errorText.isEmpty ? null : errorText,
+                        prefixIcon: const Icon(CupertinoIcons.person),
+                        hintText: 'Введите имя',
+                        enabledBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Color(0xFFF1F0F5)),
+                            borderRadius: BorderRadius.all(Radius.circular(8))),
+                        disabledBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Color(0xFFF1F0F5)),
+                            borderRadius: BorderRadius.all(Radius.circular(8))),
+                        border: const OutlineInputBorder(
+                            borderSide: BorderSide(color: Color(0xFFF1F0F5)),
+                            borderRadius: BorderRadius.all(Radius.circular(8))),
+                      ),
+                      onChanged: (name) {
+                        errorText = '';
+                        state(() {});
+                        birthdayModel = birthdayModel.copyWith(name: name);
                       },
-                      child: const Text('OK')),
-                )
-              ]),
-            );
-          });
-        });
-    return showDialog<BirthdayModel>(
+                    ),
+                    /*   TextField(
+                      autofocus: true,
+                      decoration: InputDecoration(
+                          hintText: 'Введите имя',
+                          errorText: errorText.isEmpty ? null : errorText),
+                      onChanged: (name) {
+                        errorText = '';
+                        state(() {});
+                        birthdayModel = birthdayModel.copyWith(name: name);
+                      },
+                    ), */
+                    const SizedBox(
+                      height: 20,
+                    ),
+                    DatePickerWidget(
+                      onDateTimeChanged: (DateTime dateTime) {
+                        date = dateTime;
+                      },
+                    ),
+                    const SizedBox(
+                      height: 20,
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                          onPressed: () {
+                            if ((birthdayModel.name).trim().isEmpty) {
+                              errorText = 'Введите имя';
+                              state(() {});
+                            } else {
+                              Navigator.pop(context);
+                            }
+                          },
+                          child: const Text('OK')),
+                    )
+                  ]),
+                );
+              });
+            })
+        .then((value) => birthdayModel.copyWith(
+            birthday: DateTime(date.year, date.month, date.day, 10)));
+    /*  return showDialog<BirthdayModel>(
         context: context,
         builder: (ctx) {
           return StatefulBuilder(builder: (context, snapshot) {
@@ -240,6 +350,45 @@ class _BdPageState extends State<BdPage> {
               ]),
             );
           });
-        });
+        }); */
+  }
+}
+
+class LabelWidget extends StatelessWidget {
+  const LabelWidget({
+    Key? key,
+    required this.text,
+    required this.onTap,
+    required this.isActive,
+  }) : super(key: key);
+
+  final String text;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorTheme = context.watch<ModelTheme>().colorTheme;
+    final color = isActive ? colorTheme.primaryColor : Colors.grey;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(100),
+      onTap: () {},
+      child: Container(
+        alignment: Alignment.center,
+        constraints: const BoxConstraints(minWidth: 70),
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+        decoration: BoxDecoration(
+            border: Border.all(color: color),
+            borderRadius: BorderRadius.circular(100)),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: color,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
   }
 }

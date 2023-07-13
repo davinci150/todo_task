@@ -61,23 +61,6 @@ class DefaultFirebaseOptions {
     appId: '1:668468006082:ios:2ff7f4830a135bcd79ff5b',
     messagingSenderId: '668468006082',
     projectId: 'todo-dcf3a',
-  /*   storageBucket: 'iamcanary-app.appspot.com',
-    iosClientId:
-        '1085367683400-fns02bs1u7nvf6p7nv5632gec1oa6od0.apps.googleusercontent.com', */
     iosBundleId: 'com.example.todoTask',
   );
 }
-/* FirebaseOptions(
-    apiKey: 'AIzaSyCzPKGZUisDMa8n4DwMnz67RzZIXQf-qIU',
-    appId: '1:1085367683400:ios:e60086d8a7bdb7bc5bcb7d',
-    messagingSenderId: '1085367683400',
-    projectId: 'iamcanary-app',
-    storageBucket: 'iamcanary-app.appspot.com',
-    iosClientId: '1085367683400-fns02bs1u7nvf6p7nv5632gec1oa6od0.apps.googleusercontent.com',
-    iosBundleId: 'com.iamcanary.ios',
-  ); */
-/* FirebaseOptions(
-          apiKey: 'AIzaSyC32WB0mGBAEKSVz5ozz7_k2KdlurznicQ',
-          appId: '1:668468006082:ios:2ff7f4830a135bcd79ff5b',
-          messagingSenderId: '',
-          projectId: 'todo-dcf3a') */

@@ -4,9 +4,9 @@ import 'dart:developer';
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:todo_task/model/group_model.dart';
 
 import '../model/folder_model.dart';
+import '../model/task_model.dart';
 
 @LazySingleton()
 class TasksDao {
@@ -23,7 +23,7 @@ class TasksDao {
     prefs = await SharedPreferences.getInstance();
   }
 
-  void saveTasks(List<GroupModel> list, String folderKey) {
+  void saveTasks(List<TaskModel> list, String folderKey) {
     final saveJson = list.map((e) => e.toJson()).toList();
     final result = jsonEncode(saveJson);
 
@@ -43,7 +43,7 @@ class TasksDao {
   }
 
   List<FolderModel>? folders;
-  List<GroupModel>? groups;
+  List<TaskModel>? groups;
 
   List<FolderModel> getFolders() {
     if (folders != null) {
@@ -55,24 +55,24 @@ class TasksDao {
     if ((jsonStr ?? '').isNotEmpty) {
       final map = jsonDecode(jsonStr!) as List<dynamic>;
       for (var value in map) {
-        result.add(FolderModel.fromJson(value as Map<String, dynamic>));
+        result.add(FolderModel.fromJson(value as Map<String, dynamic>,''));
       }
     }
     folders = result;
     return result;
   }
 
-  List<GroupModel> getGroups(String folderKey) {
+  List<TaskModel> getGroups(String folderKey) {
     if (groups != null) {
       return groups!;
     }
-    List<GroupModel> result = [];
+    List<TaskModel> result = [];
     final jsonStr = prefs.getString(folderKey);
     log('keysGroups $jsonStr');
     if ((jsonStr ?? '').isNotEmpty) {
       final map = jsonDecode(jsonStr!) as List<dynamic>;
       for (var value in map) {
-       // result.add(GroupModel.fromJson(value as Map<String, dynamic>));
+        // result.add(GroupModel.fromJson(value as Map<String, dynamic>));
       }
     }
 

@@ -1,9 +1,13 @@
+import 'dart:io';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
 import '../api/auth_api.dart';
 import '../model/user_model.dart';
 import '../presentation/app_colors.dart';
+import '../router/router.dart';
 import '../services/context_provider.dart';
 import '../widgets/dialog/adaptive_dialog.dart';
 
@@ -41,16 +45,24 @@ class _SignInPageState extends State<SignInPage> {
                   padding: const EdgeInsets.all(8.0),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.verified_user),
-                      const SizedBox(
+                    children: const [
+                      Icon(Icons.verified_user),
+                      SizedBox(
                         width: 12,
                       ),
-                      const Text('Sign in with Google'),
+                      Text('Sign in with Google'),
                     ],
                   ),
                 ),
-                onPressed: () {},
+                onPressed: () async {
+                  try {
+                    if (Platform.isMacOS) {
+                      await GetIt.I<AuthApi>().signInWithGoogle();
+                    }
+                  } on Exception catch (error) {
+                    await showAlert(title: error.toString());
+                  }
+                },
               ),
               const SizedBox(
                 height: 32,
@@ -89,8 +101,9 @@ class _SignInPageState extends State<SignInPage> {
                 height: 6,
               ),
               TextField(
+                autofillHints: const [AutofillHints.email],
                 decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.account_balance),
+                  prefixIcon: Icon(CupertinoIcons.envelope),
                   hintText: 'Uname@email.com',
                   enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(color: Color(0xFFF1F0F5)),
@@ -121,7 +134,7 @@ class _SignInPageState extends State<SignInPage> {
               ),
               TextField(
                 decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.lock),
+                  prefixIcon: Icon(CupertinoIcons.lock),
                   hintText: 'Password',
                   enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(color: Color(0xFFF1F0F5)),
@@ -182,8 +195,9 @@ class _SignInPageState extends State<SignInPage> {
                   ),
                   TextButton(
                     onPressed: () {
-                      Navigator.of(navigatorKeyStart.currentContext!)
-                          .pushNamed('sign_up');
+                      GetIt.I<RouterI>().navigateTo(RouterI.signUp);
+                      /*  Navigator.of(navigatorKey.currentContext!)
+                          .pushNamed('sign_up'); */
                     },
                     child: const Text(
                       'Sign Up',

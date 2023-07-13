@@ -1,51 +1,66 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
-import 'package:todo_task/services/notification_service.dart';
-import 'package:todo_task/repository/birthdays_repository.dart';
+import 'package:rxdart/rxdart.dart';
 
-import '../widgets/dialog/adaptive_dialog.dart';
 import '../model/birthday_model.dart';
+import '../repository/birthdays_repository.dart';
 
 class BirthdaysWidgetModel extends ChangeNotifier {
   BirthdaysWidgetModel() {
     _setup();
   }
 
-  List<BirthdayModel> birthdays = [];
+  List<BirthdayModel>? birthdays;
+
+  BehaviorSubject<String> searchSubj = BehaviorSubject.seeded('');
+  StreamSubscription<dynamic>? streamSub;
 
   void _setup() {
-    GetIt.I<BirthdaysRepository>().birthdaysStream().listen((event) {
-      birthdays = event ?? [];
+    final bdStream = GetIt.I<BirthdaysRepository>().birthdaysStream();
+    streamSub = Rx.combineLatest2(bdStream, searchSubj,
+        (List<BirthdayModel>? event, String searchText) {
+      final list = List<BirthdayModel>.of(event ?? []);
+
+      if (searchText.isNotEmpty) {
+        return list
+            .where((element) =>
+                element.name.toLowerCase().contains(searchText.toLowerCase()))
+            .toList();
+      } else {
+        return list;
+      }
+    }).listen((event) {
+      birthdays = event;
       notifyListeners();
     });
   }
 
   void addBirthday(BirthdayModel model) {
     GetIt.I<BirthdaysRepository>().addBirthday(model);
-    //NotificationService().yearlyNotification(0, model.date!, model.text);
-  }
-}
-
-class BirthdaysModelProvider extends InheritedNotifier {
-  const BirthdaysModelProvider(
-      {Key? key, required Widget child, required this.model})
-      : super(key: key, child: child, notifier: model);
-
-  final BirthdaysWidgetModel model;
-
-  static BirthdaysModelProvider? watch(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<BirthdaysModelProvider>();
   }
 
-  static BirthdaysModelProvider? read(BuildContext context) {
-    final widget = context
-        .getElementForInheritedWidgetOfExactType<BirthdaysModelProvider>()
-        ?.widget;
-    return widget is BirthdaysModelProvider ? widget : null;
+  void deleteBirthday(String id) {
+    GetIt.I<BirthdaysRepository>().deleteBirthday(id);
+  }
+
+  void onSearch(String text) {
+    searchSubj.sink.add(text);
+  }
+
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
   }
 
   @override
-  bool updateShouldNotify(covariant InheritedNotifier<Listenable> oldWidget) {
-    return true;
+  void dispose() {
+    if (!_disposed) super.dispose();
+    _disposed = true;
+    streamSub?.cancel();
+    searchSubj.close();
   }
 }

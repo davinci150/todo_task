@@ -18,6 +18,7 @@ class _ExpandedSectionState extends State<ExpandedSection>
 
   @override
   void initState() {
+   // print('### INITSTAT');
     super.initState();
     prepareAnimations();
     _runExpandChecks();

@@ -1,9 +1,10 @@
 import 'dart:convert';
 
+import 'package:equatable/equatable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class UserModel {
-  UserModel({
+class UserModel extends Equatable {
+  const UserModel({
     required this.name,
     required this.email,
     required this.uid,
@@ -59,4 +60,12 @@ class UserModel {
       imageUrl: imageUrl ?? this.imageUrl,
     );
   }
+
+  @override
+  List<Object?> get props => [
+        name,
+        email,
+        uid,
+        imageUrl,
+      ];
 }

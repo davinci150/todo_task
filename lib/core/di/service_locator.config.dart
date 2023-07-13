@@ -14,11 +14,13 @@ import 'package:injectable/injectable.dart' as _i2;
 
 import '../../api/auth_api.dart' as _i3;
 import '../../api/birthdays_api.dart' as _i5;
-import '../../api/tasks_api.dart' as _i8;
+import '../../api/tasks_api.dart' as _i9;
 import '../../dao/auth_dao.dart' as _i4;
-import '../../dao/tasks_dao.dart' as _i9;
+import '../../dao/tasks_dao.dart' as _i10;
+import '../../dao/theme_dao.dart' as _i12;
 import '../../repository/birthdays_repository.dart' as _i6;
-import '../../repository/tasks_repository.dart' as _i10;
+import '../../repository/tasks_repository.dart' as _i11;
+import '../../router/router.dart' as _i8;
 import '../../services/notification_service.dart' as _i7;
 
 // ignore_for_file: unnecessary_lambdas
@@ -41,12 +43,14 @@ _i1.GetIt $initGetIt(
   gh.lazySingleton<_i6.BirthdaysRepository>(
       () => _i6.BirthdaysRepository(birthdaysApi: gh<_i5.BirthdaysApi>()));
   gh.lazySingleton<_i7.NotificationService>(() => _i7.NotificationService());
-  gh.lazySingleton<_i8.TasksApi>(
-      () => _i8.TasksApi(authApi: gh<_i3.AuthApi>()));
-  gh.lazySingleton<_i9.TasksDao>(() => _i9.TasksDao());
-  gh.lazySingleton<_i10.TasksRepository>(() => _i10.TasksRepository(
-        taskApi: gh<_i8.TasksApi>(),
-        tasksDao: gh<_i9.TasksDao>(),
+  gh.singleton<_i8.RouterI>(_i8.Router());
+  gh.lazySingleton<_i9.TasksApi>(
+      () => _i9.TasksApi(authApi: gh<_i3.AuthApi>()));
+  gh.lazySingleton<_i10.TasksDao>(() => _i10.TasksDao());
+  gh.lazySingleton<_i11.TasksRepository>(() => _i11.TasksRepository(
+        taskApi: gh<_i9.TasksApi>(),
+        tasksDao: gh<_i10.TasksDao>(),
       ));
+  gh.lazySingleton<_i12.ThemeDao>(() => _i12.ThemeDao());
   return getIt;
 }

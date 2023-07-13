@@ -35,8 +35,7 @@ abstract class ColorTheme {
 // LIGHT
 class LightColorTheme implements ColorTheme {
   @override
-  Color get checkboxColor => AppColors.codGray;
-
+  Color get checkboxColor =>AppColors.gray;// Color(0xFFC4C1CE);
   @override
   Color get dividerColor => AppColors.zambezi;
 
@@ -86,7 +85,7 @@ class DarkColorTheme implements ColorTheme {
   Color get logoutColor => AppColors.alizarinCrimson;
 
   @override
-  Color get mobileScaffoldColor => AppColors.steelGray;
+  Color get mobileScaffoldColor => AppColors.cinder;
 
   @override
   Color get primaryColor => AppColors.blueMarguerite;

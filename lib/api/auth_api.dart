@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:desktop_webview_auth/desktop_webview_auth.dart';
 import 'package:desktop_webview_auth/google.dart';
@@ -16,6 +18,10 @@ class AuthApi {
   final String _path = kDebugMode ? 'test' : 'tasksNew';
 
   String? get getUid {
+    if(Platform.isMacOS){
+      return 'XwPyl4RONohYU4wbvyrQtQY1hLi2';
+      //return 'P0mcfYwoVSd4KOzUDz2kwhUCS7l2';
+    }
     //return 'mKSkbFBTiteCnZQjVi2QzaZFF0e2';
     return FirebaseAuth.instance.currentUser?.uid;
   }

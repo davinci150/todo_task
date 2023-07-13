@@ -9,7 +9,9 @@ import '../../api/auth_api.dart';
 import '../../model/folder_model.dart';
 
 class SidebarWidgetModel extends ChangeNotifier {
-  SidebarWidgetModel();
+  SidebarWidgetModel() {
+    setup();
+  }
 
   List<FolderModel> list = [];
 
@@ -17,10 +19,10 @@ class SidebarWidgetModel extends ChangeNotifier {
 
   Future<void> logout() async {
     await GetIt.I<AuthApi>().logout();
-    list.clear();
+    /*    list.clear();
     selectedFolderStr = null;
-    notifyListeners();
-    await sub?.cancel();
+    notifyListeners(); 
+    await sub?.cancel();*/
   }
 
   StreamSubscription<List<FolderModel>?>? sub;
@@ -32,11 +34,31 @@ class SidebarWidgetModel extends ChangeNotifier {
     //  if (selectedGroupIndex != null) {
     //    selectedFolderStr = selectedGroupIndex;
     //  }
-    sub?.cancel();
+    //sub?.cancel();
     sub = GetIt.I<TasksRepository>().foldersStream().listen((event) {
       list = event ?? [];
       notifyListeners();
     });
+  }
+
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+   // print('### CHANGE NOTI');
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    sub?.cancel();
+    if (!_disposed) {
+      super.dispose();
+    }
+
+    _disposed = true;
   }
 
   void deleteFolder(FolderModel model) {
@@ -45,11 +67,20 @@ class SidebarWidgetModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addFolder(String title) {
-    final folderModel =
-        FolderModel(title: title, ownerUid: GetIt.I<AuthApi>().getUid!);
-    GetIt.I<TasksRepository>().createFolder(folderModel);
+  void removeFolderForMe(FolderModel model) {
+    GetIt.I<TasksRepository>().removeFolderForMe(model, model.createdBy!);
+    selectedFolderStr = null;
+    notifyListeners();
+  }
+
+  Future<FolderModel> addFolder(String title) {
+    final folderModel = FolderModel(
+        name: title,
+        createdBy: GetIt.I<AuthApi>().getUid!,
+        members: [],
+        id: '');
     selectFolder(title);
+    return GetIt.I<TasksRepository>().createFolder(folderModel);
   }
 
   void selectFolder(String folderKey) {

@@ -1,9 +1,13 @@
+import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vibration/vibration.dart';
 
+import '../main.dart';
+import '../presentation/app_colors.dart';
 import '../presentation/my_flutter_app_icons.dart';
 import '../providers/theme_provider.dart';
 
@@ -47,9 +51,9 @@ class _CheckboxCustomState extends State<CheckboxCustom> {
       icon = Icons.visibility_off;
     } else {
       if (curValue == true) {
-        icon = MyFlutterApp.check_box;
+        icon = CupertinoIcons.checkmark_alt_circle; //MyFlutterApp.check_box;
       } else {
-        icon = MyFlutterApp.check_box_outline;
+        icon = CupertinoIcons.circle; //MyFlutterApp.check_box_outline;
       }
     }
     return icon;
@@ -59,7 +63,10 @@ class _CheckboxCustomState extends State<CheckboxCustom> {
   Widget build(BuildContext context) {
     final colorTheme = context.read<ModelTheme>().colorTheme;
     final IconData checkBox = getIcon();
-    return GestureDetector(
+    return InkWell(
+      canRequestFocus: false,
+      hoverColor: AppColors.jumbo.withOpacity(0.2),
+      borderRadius: BorderRadius.circular(100),
       /*  onLongPress: widget.onChanged == null
           ? null
           : () {
@@ -75,7 +82,9 @@ class _CheckboxCustomState extends State<CheckboxCustom> {
 
               widget.onChanged!(curValue);
               setState(() {});
-              Vibration.vibrate(duration: 1);
+              if (!Platform.isMacOS) {
+                Vibration.vibrate(duration: 1);
+              }
             },
       child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 250),
@@ -94,11 +103,16 @@ class _CheckboxCustomState extends State<CheckboxCustom> {
               },
             );
           },
-          child: Icon(
-            checkBox,
-            key: ValueKey(checkBox),
-            color: colorTheme.checkboxColor,
-            size: Theme.of(context).primaryIconTheme.size,
+          child: Padding(
+            padding: const EdgeInsets.all(6.0),
+            child: Icon(
+              checkBox,
+              key: ValueKey(checkBox),
+              color: curValue == true
+                  ? colorTheme.primaryColor
+                  : colorTheme.checkboxColor,
+              size: isDesktop ? 20 : Theme.of(context).primaryIconTheme.size,
+            ),
           )),
     );
   }

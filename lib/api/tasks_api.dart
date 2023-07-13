@@ -1,10 +1,10 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:injectable/injectable.dart';
-import 'package:rxdart/rxdart.dart';
 
 import '../model/folder_model.dart';
-import '../model/group_model.dart';
-import '../widgets/dialog/adaptive_dialog.dart';
+import '../model/task_model.dart';
 import 'auth_api.dart';
 
 @LazySingleton()
@@ -14,213 +14,125 @@ class TasksApi {
   final AuthApi authApi;
 
   Stream<List<FolderModel>> foldersStream() {
-    /*  documentReference().snapshots().map((event) {
-      print('####qq ${event.data()}');
-      final folders = <FolderModel>[];
-      event.data()!.forEach((key, dynamic value) {
-        final dataMap = value as Map<String, dynamic>;
-        dataMap.forEach((key, dynamic item) {
-          final folderName = item as String;
-          folders.add(FolderModel(title: folderName.toString()));
-        });
-      });
-      return folders;
-    }); */
-
-    return Rx.combineLatest2(
-        documentReference1().collection('folders').snapshots(),
-        documentReference1().snapshots(),
-        (QuerySnapshot<Map<String, dynamic>> a,
-            DocumentSnapshot<Map<String, dynamic>> b) {
-      final List<FolderModel> myFolders = [];
-      for (final element in a.docs) {
-        myFolders.add(FolderModel(title: element.id));
-      }
-
-      final folders = <FolderModel>[];
-      if (b.data() != null) {
-        b.data()!.forEach((key, dynamic value) {
-          final folderName = value as String;
-          folders.add(FolderModel(title: folderName.toString(), ownerUid: key));
-        });
-      }
-
-      return [...myFolders, ...folders];
+    return groupsRef()
+        .where('Members', arrayContains: authApi.getUid)
+        .snapshots()
+        .map((event) {
+      return event.docs
+          .map((e) => FolderModel.fromJson(e.data(), e.id))
+          .toList();
     });
   }
 
   Future<void> renameFolder(FolderModel folder, String title) async {
-    await showAlert(title: 'ПОКА НЕ ДОСТУПНО');
-    return;
-    /*   final doc =
-        await documentReference().collection('folders').doc(folderKey).get();
-    if (doc.exists) {
-      final data = doc.data()!;
-      await documentReference().collection('folders').doc(title).set(data);
-      await documentReference().collection('folders').doc(folderKey).delete();
-    } */
+    await groupsRef().doc(folder.id).update(<String, dynamic>{'Name': title});
   }
 
-  Future<List<String?>> getUsersByIds(List<String> uids) async {
+  Future<List<String?>> getUsersByIds(List<String> ids) async {
     final List<String?> users = [];
-    print('### GET BY ID ${uids}');
-    for (final uid in uids) {
-      final usersByEmail =
-          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    for (final uid in ids) {
+      final usersByEmail = await usersRef().doc(uid).get();
 
       users.add(usersByEmail.data()?['Name'] as String?);
     }
     return users;
   }
 
-  Future<bool> share(String email, FolderModel folder) async {
-    final usersByEmail = FirebaseFirestore.instance
-        .collection('users')
-        .where('Email', isEqualTo: email);
-    final doc = await usersByEmail.get();
-    if (doc.docs.isEmpty) {
-      return false;
-    } else {
-      print(doc.docs.first.data());
-      final userUid = doc.docs.first.id;
-      print(userUid);
-      await FirebaseFirestore.instance
-          .collection(authApi.getPath)
-          .doc(userUid)
-          .update(<String, dynamic>{authApi.getUid!: folder.title});
-      await documentReference1()
-          .collection('folders')
-          .doc(folder.title)
-          .collection('members')
-          .doc(userUid)
-          .set(<String, dynamic>{});
-      /*   await FirebaseFirestore.instance
-          .collection(authApi.getPath)
-          .doc(authApi.getUid)
-          .update(<String, dynamic>{authApi.getUid!: folder.title}); */
-
-      return true;
-    }
-
-    /*   final doc =
-        await documentReference().collection('folders').doc(folderKey).get();
-    if (doc.exists) {
-      final data = doc.data()!;
-      await documentReference().collection('folders').doc(title).set(data);
-      await documentReference().collection('folders').doc(folderKey).delete();
-    } */
+  Future<FolderModel> getGroupById(String id) async {
+    final groupModel = await groupsRef().doc(id).get();
+    return FolderModel.fromJson(groupModel.data()!, groupModel.id);
   }
 
-  Stream<GroupWrapper> getGroups(FolderModel folder) {
-    /*   return documentReference()
-        .collection('folders')
-        .doc(folderKey)
-          .collection('tasks')
-        .snapshots()
-        .map((event) {
-        
-      print('####qq ${event.reference.collection('tasks')}');
-      /*   final members = [];
-      final groups = event
-          .data()['tasks']
-          .map((e) => GroupModel.fromJson(e.data(), e.id))
-          .toList();
-      groups.sort((a, b) => a.createdOn.compareTo(b.createdOn)); */
-      return GroupWrapper(groups: [], members: []);
-    }); */
+  Future<void> share(String email, FolderModel folder) async {
+    final usersByEmail = usersRef().where('Email', isEqualTo: email);
+    final usersDocs = await usersByEmail.get().then((value) => value.docs);
 
-    return Rx.combineLatest2(
-        documentReference(folder)
-            .collection('folders')
-            .doc(folder.title)
-            .collection('tasks')
-            .snapshots(),
-        documentReference(folder)
-            .collection('folders')
-            .doc(folder.title)
-            .collection('members')
-            .snapshots(),
-        (QuerySnapshot<Map<String, dynamic>> a,
-            QuerySnapshot<Map<String, dynamic>> b) {
-      final groups = a.docs
-          .map((e) => GroupModel.fromJson(e.data(), e.id))
+    if (usersDocs.isEmpty) {
+      throw Exception('Нет такого пользователя');
+    } else {
+      final userId = usersDocs.first.id;
+      final groupModel = await getGroupById(folder.id);
+
+      if (groupModel.members.contains(userId)) {
+        throw Exception('У пользователя уже есть доступ к этому списку');
+      }
+      final members = List.of(groupModel.members)..add(userId);
+      await groupsRef()
+          .doc(folder.id)
+          .update(<String, dynamic>{'Members': members});
+    }
+  }
+
+  Stream<List<TaskModel>> getGroups(FolderModel folder) {
+    return tasksRef(folder.id).snapshots().map((event) {
+      final tasks = event.docs
+          .map((e) => TaskModel.fromJson(e.data(), e.id))
           .toList()
         ..sort((a, b) => a.createdOn.compareTo(b.createdOn));
-
-      final members = b.docs.map((e) => Members(uid: e.id)).toList();
-      /*   groups.forEach((element) {
-        if (element.viewedUid.contains(authApi.getUid)) return;
-        if (element.ownerUid == authApi.getUid) return;
-        final viewedUid = List.of(element.viewedUid)..add(authApi.getUid!);
-        final groupModel = element.copyWith(viewedUid: viewedUid);
-        onChangeGroupModel(folder, groupModel);
-      }); */
-
-      return GroupWrapper(groups: groups, members: members);
+      return tasks;
     });
   }
 
-  void onChangeGroupModel(FolderModel folder, GroupModel model) {
-    documentReference(folder)
-        .collection('folders')
-        .doc(folder.title)
-        .collection('tasks')
-        .doc(model.uid)
-        .set(model.toJson());
+  void onChangeGroupModel(FolderModel folder, TaskModel model) {
+    tasksRef(folder.id).doc(model.id).set(model.toJson());
   }
 
-  void createGroup(FolderModel folder, GroupModel model) {
-    final mod = model.copyWith(ownerUid: authApi.getUid);
-
-    documentReference(folder)
-        .collection('folders')
-        .doc(folder.title)
-        .collection('tasks')
-        .doc()
-        .set(mod.toJson());
+  Future<void> createGroup(FolderModel folder, TaskModel model) async {
+    final groupModel = model.copyWith(ownerUid: authApi.getUid);
+    await tasksRef(folder.id).add(groupModel.toJson());
   }
 
-  void deleteGroup(FolderModel folder, GroupModel model) {
-    documentReference(folder)
-        .collection('folders')
-        .doc(folder.title)
-        .collection('tasks')
-        .doc(model.uid)
-        .delete();
+  void deleteGroup(FolderModel folder, TaskModel model) {
+    tasksRef(folder.id).doc(model.id).delete();
   }
 
-  DocumentReference<Map<String, dynamic>> documentReference(FolderModel model) {
+  Future<FolderModel> createFolder(String title) async {
+    final userId = authApi.getUid!;
+    final FolderModel folderModel =
+        FolderModel(id: '', name: title, createdBy: userId, members: [userId]);
+    final response = await groupsRef().add(folderModel.toJson());
+
+    return folderModel.copyWith(id: response.id);
+  }
+
+  Future<void> deleteFolder(String folderId) async {
+    print('### ${folderId}');
+   // await groupsRef().doc(folderId).delete();
+
+    await FirebaseFirestore.instance.collection('tasks').doc('MlG8EjUbarT0Lt3ZHGkm').delete();
+  }
+
+  Future<void> removeFolderForMe(String folderKey, String ownerUid) async {
+    final userId = authApi.getUid!;
+    await groupsRef().doc(folderKey).update({
+      'Members': FieldValue.arrayRemove(<dynamic>[userId])
+    });
+  }
+
+  CollectionReference<Map<String, dynamic>> groupsRef() {
+    return FirebaseFirestore.instance.collection('groups');
+  }
+
+  CollectionReference<Map<String, dynamic>> usersRef() {
+    return FirebaseFirestore.instance.collection('users');
+  }
+
+  CollectionReference<Map<String, dynamic>> tasksRef(String folderId) {
     return FirebaseFirestore.instance
-        .collection(authApi.getPath)
-        .doc(model.ownerUid ?? authApi.getUid);
+        .collection('tasks')
+        .doc(folderId)
+        .collection('tasks');
   }
 
-  DocumentReference<Map<String, dynamic>> documentReference1() {
-    return FirebaseFirestore.instance
-        .collection(authApi.getPath)
-        .doc(authApi.getUid);
-  }
+  /*  Future<void> batchDelete() {
+  WriteBatch batch = FirebaseFirestore.instance.batch();
 
-  Future<void> createFolder(String title) async {
-    final doc =
-        await documentReference1().collection('folders').doc(title).get();
-    if (doc.exists) {
-      await showAlert(title: 'This folder is exists');
-    } else {
-      await documentReference1()
-          .collection('folders')
-          .doc(title)
-          .set(<String, dynamic>{});
-      await documentReference1()
-          .collection('folders')
-          .doc(title)
-          .collection('members')
-          .doc(authApi.getUid)
-          .set(<String, dynamic>{});
-    }
-  }
+  return users.get().then((querySnapshot) {
+    querySnapshot.docs.forEach((document) {
+      batch.delete(document.reference);
+    });
 
-  void deleteFolder(String folderKey) {
-    documentReference1().collection('folders').doc(folderKey).delete();
-  }
+    return batch.commit();
+  });
+} */
 }

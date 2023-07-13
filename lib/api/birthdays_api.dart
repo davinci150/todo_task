@@ -11,24 +11,17 @@ class BirthdaysApi {
   final AuthApi authApi;
 
   Stream<List<BirthdayModel>> birthdaysStream() {
-    return FirebaseFirestore.instance
-        .collection(authApi.getPath)
-        .doc(authApi.getUid)
-        .collection('birthdays')
-        .snapshots()
-        .map((event) {
+    return birthdaysRef().snapshots().map((event) {
       final List<BirthdayModel> list = [];
       event.docs.forEach((value) {
-        final bd = BirthdayModel.fromJson(value.data(), value.id);
-
-        list.add(bd);
+        list.add(BirthdayModel.fromJson(value.data(), value.id));
       });
-
+      list.sort((a, b) => a.countdownDays.compareTo(b.countdownDays));
       return list;
     });
   }
 
-  Future<List<BirthdayModel>> getBdays() async {
+/*   Future<List<BirthdayModel>> getBdays() async {
     final List<BirthdayModel> bdays = [];
     final docs = await FirebaseFirestore.instance
         .collection(authApi.getPath)
@@ -41,14 +34,25 @@ class BirthdaysApi {
       bdays.add(bd);
     });
     return bdays;
+  } */
+
+  Future<String> addBirthday(BirthdayModel model) async {
+    final response = await birthdaysRef().add(model.toJson());
+    return response.id;
   }
 
-  Future<void> addBirthday(BirthdayModel model) async {
-    await FirebaseFirestore.instance
-        .collection(authApi.getPath)
-        .doc(authApi.getUid)
+  Future<void> deleteBirthday(String id) async {
+    await birthdaysRef().doc(id).delete();
+  }
+
+  Future<void> removeBirthday(String id) async {
+    await birthdaysRef().doc(id).delete();
+  }
+
+  CollectionReference<Map<String, dynamic>> birthdaysRef() {
+    return FirebaseFirestore.instance
         .collection('birthdays')
-        .doc()
-        .set(model.toJson());
+        .doc(authApi.getUid)
+        .collection('birthdays');
   }
 }

@@ -18,15 +18,18 @@ dependencies:
   injectable: 2.1.1
   get_it: 7.2.0
   provider: 6.0.5
-  firebase_messaging: 14.3.0
-  firebase_auth: 4.2.3
-  firebase_core: 2.8.0
+  #firebase_messaging: 14.3.0
+  firebase_auth: 4.6.1
+  firebase_core: 2.13.0
   cloud_firestore: 4.4.5
   desktop_webview_auth: 0.0.11
+  equatable: ^2.0.5
   cupertino_icons: 1.0.2
   rxdart: 0.27.7
   flutter_local_notifications: 13.0.0
   vibration: 1.7.6
+  window_manager: 0.3.2
+  just_the_tooltip: 0.0.12
 
 dev_dependencies:
   flutter_test:

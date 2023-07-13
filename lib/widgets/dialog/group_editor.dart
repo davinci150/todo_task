@@ -2,9 +2,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_neumorphic/flutter_neumorphic.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:todo_task/model/task_model.dart';
 
-import '../../model/group_model.dart';
+import '../../model/task_model.dart';
+import '../../model/subtask_model.dart';
 import '../../presentation/my_flutter_app_icons.dart';
 import '../../providers/theme_provider.dart';
 import '../custom_check_box.dart';
@@ -13,20 +13,20 @@ class GroupEditorWidget extends StatefulWidget {
   const GroupEditorWidget({Key? key, required this.groupModel})
       : super(key: key);
 
-  final GroupModel groupModel;
+  final TaskModel groupModel;
 
   @override
   State<GroupEditorWidget> createState() => _GroupEditorWidgetState();
 }
 
 class _GroupEditorWidgetState extends State<GroupEditorWidget> {
-  late GroupModel groupModel;
+  late TaskModel groupModel;
 
   ScrollController scrollController = ScrollController();
   List<FocusNode> focuses = [];
   @override
   void initState() {
-    focuses.addAll(widget.groupModel.tasks.map((e) => FocusNode()));
+    focuses.addAll(widget.groupModel.subtasks.map((e) => FocusNode()));
     groupModel = widget.groupModel;
     super.initState();
   }
@@ -53,7 +53,7 @@ class _GroupEditorWidgetState extends State<GroupEditorWidget> {
                 children: [
                   Row(
                     children: [
-                      if (groupModel.tasks.isEmpty)
+                      if (groupModel.subtasks.isEmpty)
                         Padding(
                           padding: const EdgeInsets.only(right: 6),
                           child: CheckboxCustom(
@@ -66,28 +66,34 @@ class _GroupEditorWidgetState extends State<GroupEditorWidget> {
                         child: TextFormField(
                           onEditingComplete: () {
                             focuses.insert(0, FocusNode());
-                            final tasks = List.of(groupModel.tasks)
+                            final tasks = List.of(groupModel.subtasks)
                               ..insert(
                                   0,
-                                  TaskModel(
+                                  SubtaskModel(
                                       text: '',
                                       isDone: false,
                                       createdOn: DateTime.now(),
                                       isVisible: true,
                                       id: 3));
 
-                            groupModel = groupModel.copyWith(tasks: tasks);
+                            groupModel = groupModel.copyWith(subtasks: tasks);
                             setState(() {});
 
-                            Future<void>.delayed(Duration(milliseconds: 200))
+                            Future<void>.delayed(
+                                    const Duration(milliseconds: 200))
                                 .then((value) {
                               focuses[0].requestFocus();
                               // FocusScope.of(context).nextFocus();
                             });
                           },
-                          style: TextStyle(color: colorTheme.sidebarIconColor),
+                          style: TextStyle(
+                              color: colorTheme.sidebarIconColor,
+                              fontSize: groupModel.subtasks.isNotEmpty ? 17 : null,
+                              fontWeight: groupModel.subtasks.isNotEmpty
+                                  ? FontWeight.w600
+                                  : null),
                           textInputAction: TextInputAction.next,
-                          autofocus: groupModel.tasks.isEmpty,
+                          autofocus: groupModel.subtasks.isEmpty,
                           initialValue: groupModel.text,
                           onChanged: (value) {
                             groupModel = groupModel.copyWith(text: value);
@@ -100,8 +106,8 @@ class _GroupEditorWidgetState extends State<GroupEditorWidget> {
                   ),
                   Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: groupModel.tasks.map((e) {
-                      final index = groupModel.tasks.indexOf(e);
+                    children: groupModel.subtasks.map((e) {
+                      final index = groupModel.subtasks.indexOf(e);
                       return Row(
                         children: [
                           CheckboxCustom(
@@ -119,24 +125,26 @@ class _GroupEditorWidgetState extends State<GroupEditorWidget> {
                               onKey: (event) {
                                 if (event.isKeyPressed(
                                     LogicalKeyboardKey.backspace)) {
-                                  print('### eventl');
+                                  if (groupModel.subtasks[index].text!.isEmpty) {
+                                  //  print('### eventl');
 
-                                  final tasks = List.of(groupModel.tasks)
-                                    ..removeAt(index);
+                                    final tasks = List.of(groupModel.subtasks)
+                                      ..removeAt(index);
 
-                                  groupModel =
-                                      groupModel.copyWith(tasks: tasks);
+                                    groupModel =
+                                        groupModel.copyWith(subtasks: tasks);
 
-                                  if (index != 0) {
-                                    focuses[index - 1].requestFocus();
-                                  } else if (focuses.length > 1) {
-                                    focuses[index].requestFocus();
+                                    if (index != 0) {
+                                      focuses[index - 1].requestFocus();
+                                    } else if (focuses.length > 1) {
+                                      focuses[index].requestFocus();
+                                    }
+                                    focuses.removeAt(index);
+
+                                    setState(() {});
                                   }
-                                  focuses.removeAt(index);
-
-                                  setState(() {});
                                 }
-                                print('### eventl 1 ${event}');
+                             //   print('### eventl 1 ${event}');
                               },
                               child: TextFormField(
                                 key: ValueKey(focuses[index]),
@@ -145,13 +153,13 @@ class _GroupEditorWidgetState extends State<GroupEditorWidget> {
                                   print('### ${value}');
                                 }, */
                                 onEditingComplete: () {
-                                  print('### ds');
+                                 // print('### ds');
                                   focuses.insert(index + 1, FocusNode());
 
-                                  final tasks = List.of(groupModel.tasks)
+                                  final tasks = List.of(groupModel.subtasks)
                                     ..insert(
                                         index + 1,
-                                        TaskModel(
+                                        SubtaskModel(
                                             text: '',
                                             isDone: false,
                                             createdOn: DateTime.now(),
@@ -159,27 +167,27 @@ class _GroupEditorWidgetState extends State<GroupEditorWidget> {
                                             id: 3));
 
                                   groupModel =
-                                      groupModel.copyWith(tasks: tasks);
+                                      groupModel.copyWith(subtasks: tasks);
                                   setState(() {});
 
                                   Future<void>.delayed(
-                                          Duration(milliseconds: 200))
+                                          const Duration(milliseconds: 200))
                                       .then((value) {
                                     focuses[index + 1].requestFocus();
                                   });
                                 },
                                 onFieldSubmitted: (value) {
-                                  print('### ${value}');
+                                //  print('### ${value}');
                                 },
-                                autofocus: index == groupModel.tasks.length - 1,
+                                autofocus: index == groupModel.subtasks.length - 1,
                                 onChanged: (value) {
-                                  final tasks = List.of(groupModel.tasks);
+                                  final tasks = List.of(groupModel.subtasks);
                                   final task =
                                       tasks[index].copyWith(text: value);
                                   tasks[index] = task;
 
                                   groupModel =
-                                      groupModel.copyWith(tasks: tasks);
+                                      groupModel.copyWith(subtasks: tasks);
                                 },
                                 initialValue: e.text,
                                 style: TextStyle(
